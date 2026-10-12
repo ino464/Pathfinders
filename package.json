@@ -7,7 +7,8 @@
   "scripts": {
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,css,md,json}\" --config ./.prettierrc",
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,css,md,json}\" --config ./.prettierrc",
-    "lint": "npm run lint --workspaces --if-present"
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {
     "prettier": "^3.9.7",
