@@ -63,6 +63,14 @@ These rules restate the decisions in the form the cases use.
 12. The function has no size limit. It does not truncate.
 13. The function does not read `status`.
 
+The target is the last message, so the array ends with an
+`assistant` message whenever the target is not the root. The
+caller appends its own trailing `user` message. Issue #32 has to
+do this rather than merely choosing to: chat completion APIs
+expect the final message to come from the user, and a trailing
+`assistant` message is either rejected or treated as a prefill
+to continue.
+
 ## Fixture conventions
 
 - Field names are the column names from the migration: `id`,
@@ -344,7 +352,8 @@ person before issue #31 can close.
    #30 has not defined the shape that `getSessionGraph` returns.
    Which names does the function receive?
 4. **Ethan.** What occurs when `targetNodeId` is not in `nodes`,
-   or when `edges` contains a cycle?
+   when `edges` contains a cycle, or when more than one node has
+   no incoming edge? Rule 2 assumes exactly one root.
 5. **Ethan.** What is the order of two preferences with the same
    `created_at`?
 6. **Cole.** Cases 5c and 5d need a merged node to stay alive
