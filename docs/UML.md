@@ -9,6 +9,7 @@ ever disagree, this file is the one that needs correcting.
 
 Additionally, you can find a picture of the graph @
 [here](uml-data-model.png)
+
 ```mermaid
 classDiagram
     direction LR
