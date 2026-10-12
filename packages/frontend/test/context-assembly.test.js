@@ -9,6 +9,7 @@ describe("context assembly", () => {
   test.todo("case 3a: merged node gives each ancestor once");
   test.todo("case 3b: equal created_at falls back to id");
   test.todo("case 3c: target below a merged node");
+  test.todo("case 3d: unequal branches use created_at order");
   test.todo("case 4a: preferences give one system message");
   test.todo("case 4b: preferences come before a deeper path");
   test.todo("case 4c: no preferences gives no system message");

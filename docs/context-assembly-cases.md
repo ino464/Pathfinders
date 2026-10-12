@@ -67,7 +67,7 @@ These rules restate the decisions in the form the cases use.
 
 - Field names are the column names from the migration: `id`,
   `content`, `status`, `created_at`, `deleted_at`,
-  `parent_node_id`, `child_node_id`. See open question 4.
+  `parent_node_id`, `child_node_id`. See open question 3.
 - Node ids are single letters so that the cases are easy to
   read. Real ids are UUIDs. Ids compare as strings.
 - Times are `t1`, `t2`, and so on, where `t1` is before `t2`.
@@ -172,7 +172,36 @@ Expected output:
 ]
 ```
 
-Branches of unequal length have no case. See open question 2.
+### Case 3d: branches of unequal length
+
+Edges: `R → A`, `A → C`, `C → M`, `R → B`, `B → M`. Created in
+the order `R`, `A`, `B`, `C`, `M`. Target: `M`.
+
+| id  | content     | created_at |
+| --- | ----------- | ---------- |
+| M   | Merged idea | t5         |
+| C   | Idea C      | t4         |
+| B   | Idea B      | t3         |
+| A   | Idea A      | t2         |
+| R   | Root prompt | t1         |
+
+Expected output: `R`, `A`, `B`, `C`, `M`. After `R`, the nodes
+that can come next are `A` and `B`, so `A` goes first. Then `B`
+and `C` can come next, so `B` goes before `C`.
+
+```json
+[
+  { "role": "user", "content": "Root prompt" },
+  { "role": "assistant", "content": "Idea A" },
+  { "role": "assistant", "content": "Idea B" },
+  { "role": "assistant", "content": "Idea C" },
+  { "role": "assistant", "content": "Merged idea" }
+]
+```
+
+A walk that finished each branch before starting the next would
+give `R`, `A`, `C`, `B`, `M`. Rule 6 is not that walk. Ethan to
+confirm rule 6 is intended.
 
 ## Case 4: preferences
 
@@ -226,7 +255,7 @@ has no `system` message.
 `docs/UML.md` says that a delete also removes everything below
 the node. A live target with a deleted ancestor is thus possible
 in two situations only: incorrect data, or a merged node with
-one deleted parent branch. See open question 7.
+one deleted parent branch. See open question 6.
 
 ### Case 5a: the target is deleted
 
@@ -266,7 +295,7 @@ is deleted. `X` is excluded because it reaches `M` only through
 `B`.
 
 The type and the message of the thrown error are not agreed. See
-open question 3.
+open question 2.
 
 ## Case 6: context larger than a token budget
 
@@ -286,7 +315,7 @@ A size guard, if the project needs one, belongs to issue #32.
 
 Path: `R → A → B`. Target: `B`. `A` has the status that means
 "rejected". The status values are not settled. See open
-question 8.
+question 7.
 
 Expected output: `A` stays in the context.
 
@@ -308,35 +337,31 @@ person before issue #31 can close.
 
 1. **Ethan.** Decisions 1a, 1b, 1c, 2, 4 and 5 were made without
    you. Do you accept them?
-2. **Ethan.** Decision 4 does not fix the order for branches of
-   unequal length. Example: `R → A → C → M` and `R → B → M`,
-   where `A` is created first, then `B`, then `C`. Is the order
-   `R, A, B, C, M` or `R, A, C, B, M`?
-3. **Ethan.** What does the function throw in cases 5a and 5b?
+2. **Ethan.** What does the function throw in cases 5a and 5b?
    Issue #32 must catch it.
-4. **Ethan and Cole.** The fixtures use the database column
+3. **Ethan and Cole.** The fixtures use the database column
    names. `docs/UML.md` uses names such as `createdAt`. Issue
    #30 has not defined the shape that `getSessionGraph` returns.
    Which names does the function receive?
-5. **Ethan.** What occurs when `targetNodeId` is not in `nodes`,
+4. **Ethan.** What occurs when `targetNodeId` is not in `nodes`,
    or when `edges` contains a cycle?
-6. **Ethan.** What is the order of two preferences with the same
+5. **Ethan.** What is the order of two preferences with the same
    `created_at`?
-7. **Cole.** Cases 5c and 5d need a merged node to stay alive
+6. **Cole.** Cases 5c and 5d need a merged node to stay alive
    when one parent is deleted. That is the open `deleteSubtree`
    question in issue #30. If the answer is no, cases 5c and 5d
    describe incorrect data only.
-8. **Cole.** The migration sets the default of `nodes.status` to
+7. **Cole.** The migration sets the default of `nodes.status` to
    `'pending'`. `docs/UML.md` names the values `NEUTRAL`,
    `ACCEPTED` and `REJECTED`. This file does not settle that.
    Case 7 does not need the answer, because the function does
    not read `status`.
-9. **Ethan.** `docs/UML.md` shows `Preference.normalize()` and
+8. **Ethan.** `docs/UML.md` shows `Preference.normalize()` and
    `Preference.toPromptFragment()`. Neither exists. The cases
    use preference `content` as stored. Is that correct?
-10. **Ethan.** The name and the location of the function are not
-    agreed. The location also depends on issue #25. The test
-    file imports nothing for that reason.
+9. **Ethan.** The name and the location of the function are not
+   agreed. The location also depends on issue #25. The test file
+   imports nothing for that reason.
 
 ## AI usage
 
