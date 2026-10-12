@@ -1,4 +1,4 @@
-# Runs Prettier and ESLint on every pull request.
+# Runs Prettier, ESLint, the tests and the build on every pull request.
 name: CI
 
 on:
@@ -16,8 +16,14 @@ concurrency:
 
 jobs:
   checks:
-    name: Format and lint
+    name: Format, lint, test and build
     runs-on: ubuntu-latest
+    # Placeholder values. The build fails without them because
+    # lib/supabase-env.js throws at module load. The publishable key is
+    # public by design, so these are not secrets.
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.invalid
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder-publishable-key
     steps:
       - uses: actions/checkout@v5
 
@@ -37,3 +43,11 @@ jobs:
       # Skips any workspace package that has no lint script.
       - name: Lint
         run: npm run lint
+
+      # Skips any workspace package that has no test script.
+      - name: Test
+        run: npm test
+
+      # Skips any workspace package that has no build script.
+      - name: Build
+        run: npm run build --workspaces --if-present
