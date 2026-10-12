@@ -15,45 +15,72 @@ classDiagram
     direction LR
 
     class User {
-        +uuid id
-        +text email
-        +timestamptz created_at
+        +id: UUID
+        +email: String
+        +createdAt: Date
+        +isAnonymous() Boolean
+        +linkEmail(String email) void
     }
 
     class Session {
-        +uuid id
-        +uuid user_id
-        +text title
-        +uuid root_node_id
-        +timestamptz created_at
-        +timestamptz updated_at
-        +timestamptz deleted_at
+        +id: UUID
+        +ownerId: UUID
+        +title: String
+        +rootNodeId: UUID
+        +createdAt: Date
+        +updatedAt: Date
+        -deletedAt: Date
+        +rename(String title) void
+        +addNode(Node parent, String content) Node
+        +merge(Node[] nodes) Node
+        +prune(Node node) void
+        +pathToRoot(Node node) Node[]
+        +export() String
+        -validateNoCycle(Node parent, Node child) Boolean
+        -touch() void
     }
 
     class Node {
-        +uuid id
-        +uuid session_id
-        +text content
-        +text status
-        +numeric position_x
-        +numeric position_y
-        +timestamptz created_at
-        +timestamptz deleted_at
+        +id: UUID
+        +sessionId: UUID
+        +content: String
+        -status: NodeStatus
+        +positionX: Number
+        +positionY: Number
+        +createdAt: Date
+        -deletedAt: Date
+        +accept() void
+        +reject() void
+        +moveTo(Number x, Number y) void
+        +isRoot() Boolean
+        +isPruned() Boolean
+        -setStatus(NodeStatus status) void
     }
 
     class Edge {
-        +uuid id
-        +uuid session_id
-        +uuid parent_node_id
-        +uuid child_node_id
-        +timestamptz created_at
+        +id: UUID
+        +sessionId: UUID
+        +parentNodeId: UUID
+        +childNodeId: UUID
+        +createdAt: Date
+        +isFrom(Node node) Boolean
+        +isTo(Node node) Boolean
     }
 
     class Preference {
-        +uuid id
-        +uuid session_id
-        +text content
-        +timestamptz created_at
+        +id: UUID
+        +sessionId: UUID
+        +content: String
+        +createdAt: Date
+        +toPromptFragment() String
+        -normalize() String
+    }
+
+    class NodeStatus {
+        <<enumeration>>
+        NEUTRAL
+        ACCEPTED
+        REJECTED
     }
 
     note for User "Managed by Supabase as auth.users"
@@ -64,6 +91,7 @@ classDiagram
     Session "1" --> "0..N" Preference : records
     Edge "0..N" --> "1" Node : originates at
     Edge "0..N" --> "1" Node : terminates at
+    Node "0..N" --> "1" NodeStatus : has
 ```
 
 ## What we store
