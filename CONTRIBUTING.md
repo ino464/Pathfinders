@@ -8,7 +8,8 @@ project.
 
 This repository uses an npm workspace monorepo:
 
-- `packages/frontend` contains the Next.js app, including its server code
+- `packages/frontend` contains the Next.js app, including its
+  server code
 
 Install all dependencies from the repository root:
 

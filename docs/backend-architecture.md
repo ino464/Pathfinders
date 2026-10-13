@@ -45,8 +45,8 @@ session. How visitors get that session in the first place is in
 ## The data access layer
 
 The data access layer is a single module,
-`packages/frontend/lib/graph-data.js`, built in isseu #30. It is the
-only code in the app that reads or writes the `sessions`,
+`packages/frontend/lib/graph-data.js`, built in issue #30. It is
+the only code in the app that reads or writes the `sessions`,
 `nodes`, `edges` and `preferences` tables. It exports six
 functions: `createSession`, `getSessionGraph`, `addNode`,
 `addEdge`, `updateNodeStatus` and `deleteSubtree`.
