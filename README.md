@@ -86,16 +86,17 @@ the original alternatives later.
 ## System Design
 
 ```text
-User
-  │
-  ▼
-Next.js and React interface
-  │
+Browser
   ├── React Flow canvas
-  │
-  ├── Next.js server routes ──► LLM API
-  │
-  └── Supabase ───────────────► Authentication and PostgreSQL
+  └── Supabase Auth ─────────► anonymous sign-in, session cookie
+        │
+        ▼  requests carry the session cookie
+Next.js server (route handlers, server actions)
+  ├── Context assembly ──────► Groq LLM API
+  └── Data access layer (lib/graph-data.js)
+        │
+        ▼
+Supabase PostgreSQL ── RLS checks every row
 ```
 
 Model requests are sent through the server so that the LLM API
