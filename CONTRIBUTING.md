@@ -8,8 +8,7 @@ project.
 
 This repository uses an npm workspace monorepo:
 
-- `packages/frontend` contains the React frontend.
-- `packages/backend` will contain the backend service.
+- `packages/frontend` contains the Next.js app, including its server code
 
 Install all dependencies from the repository root:
 
