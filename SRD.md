@@ -21,9 +21,10 @@
 
 ### Document History
 
-| Last Date Changed | Who | What Was Changed |
-| ----------------- | --- | ---------------- |
-|                   |     |                  |
+| Last Date Changed | Who           | What Was Changed                                                                                                                                                                        |
+| ----------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-13        | Ethan Ikenaga | Replaced template workout requirements in section 3 with functional requirements traced to US-01 to US-12; rebuilt the section 8 traceability matrix; changed MySQL to Postgres in 5.2. |
+| 2026-09-25        | Ethan Ikenaga | Drafted the SRD and entered user stories US-01 to US-12.                                                                                                                                |
 
 ---
 
@@ -83,7 +84,16 @@ This project solves the problem that normal AI chats are hard to
 use for brainstorming. When you explore many ideas in one chat,
 good ideas get buried and it is difficult to go back to earlier
 options. With our visual canvas, users can easily merge ideas,
-go back to previous nodes, and find chats easily
+go back to previous nodes, and find chats easily.
+
+**Product Vision:** For students, developers, and anyone who
+needs to explore many ideas without losing the good ones,
+PATHFINDERS is a visual AI brainstorming canvas that turns a
+single prompt into connected branches of ideas, so every
+direction stays organized and easy to revisit. Unlike a standard
+linear AI chat, where earlier options get buried, PATHFINDERS
+lets users branch from any idea, return to earlier ideas, and
+merge branches together.
 
 ### 1.2 Intended Audience
 
@@ -141,12 +151,20 @@ Add administrator user stories here, if applicable.
 
 The system shall:
 
-| ID    | Requirement                                                    | Priority |
-| ----- | -------------------------------------------------------------- | -------: |
-| FR-01 | The system shall authenticate users via username and password. |        2 |
-| FR-02 | The system shall allow users to store workout information.     |        1 |
-| FR-03 | The system shall allow users to search their workout history.  |        3 |
-| FR-04 | The system shall allow users to add new workout types.         |        4 |
+| ID    | Requirement                                                                                                    | Priority |
+| ----- | -------------------------------------------------------------------------------------------------------------- | -------: |
+| FR-01 | The system shall suggest and automatically create new branches based on the context of a selected node.        |    US-01 | 1   |
+| FR-02 | The system shall allow users to add new nodes to a selected chat branch, using that branch's existing context. |    US-02 | 1   |
+| FR-03 | The system shall let users view their full chat history and switch between idea branches.                      |    US-03 | 1   |
+| FR-04 | The system shall allow returning users to log in and resume their previous brainstorming work.                 |    US-04 | 2   |
+| FR-05 | The system shall allow users to accept or reject nodes and shall record each decision.                         |    US-05 | 2   |
+| FR-06 | The system shall allow users to return to a previous node in order to develop that idea in a new direction.    |    US-06 | 2   |
+| FR-07 | The system shall allow users to delete or deactivate branches and chats.                                       |    US-07 | 2   |
+| FR-08 | The system shall allow users to enter preferences and shall apply them throughout the brainstorming session.   |    US-08 | 3   |
+| FR-09 | The system shall allow users to rename chats.                                                                  |    US-09 | 3   |
+| FR-10 | The system shall allow users to export a brainstorm graph so it can be shared.                                 |    US-10 | 3   |
+| FR-11 | The system shall allow users to import a brainstorm graph that another user exported.                          |    US-11 | 3   |
+| FR-12 | The system shall allow users to select two or more nodes and merge them into a combined node.                  |    US-12 | 4   |
 
 ---
 
@@ -181,8 +199,10 @@ Add your planned endpoints based on your REST API design.
 
 ### 5.2 Database Schema
 
-Add your MySQL database schema and UML diagram here.
+The database is PostgreSQL, hosted through Supabase. Add the
+Postgres schema and UML diagram here.
 
+![Pathfinders UML Diagram](image.png)
 ---
 
 ## 6. User Interface (UI)
@@ -204,12 +224,20 @@ List the data that will be stored persistently in the database.
 
 ## 8. Traceability Matrix
 
-| ID    | Requirement                                                    | Line of Code |
-| ----- | -------------------------------------------------------------- | -----------: |
-| US-01 | The system shall authenticate users via username and password. |          152 |
-| US-02 | The system shall allow users to store workout information.     |          256 |
-| US-03 | The system shall allow users to search workout history.        |           46 |
-| US-04 | The system shall allow users to add new workout types.         |           45 |
+| ID    | Requirement | Line of Code |
+| ----- | ----------- | -----------: |
+| US-01 | FR-01       |          TBD |
+| US-02 | FR-02       |          TBD |
+| US-03 | FR-03       |          TBD |
+| US-04 | FR-04       |          TBD |
+| US-05 | FR-05       |          TBD |
+| US-06 | FR-06       |          TBD |
+| US-07 | FR-07       |          TBD |
+| US-08 | FR-08       |          TBD |
+| US-09 | FR-09       |          TBD |
+| US-10 | FR-10       |          TBD |
+| US-11 | FR-11       |          TBD |
+| US-12 | FR-12       |          TBD |
 
 ---
 
