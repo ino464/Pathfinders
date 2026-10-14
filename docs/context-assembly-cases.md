@@ -9,8 +9,9 @@ The function does not exist yet. This file describes agreed
 behaviour only. Where nothing is agreed, the file has an open
 question and no case.
 
-**Review status:** Ethan has not read this file yet. Issue #31
-must not start before he does.
+**Review status:** Ethan read this file on 2026-10-14. Answers are
+under each open question. Decisions 1a–5 accepted.
+
 
 ## Decisions
 
@@ -19,16 +20,16 @@ decision.
 
 | #   | Decision             | Choice                                                                                                                                      | Decided by | Status                      |
 | --- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------- |
-| 1a  | Inputs               | `(nodes, edges, targetNodeId, preferences)`. No `rootPrompt` argument.                                                                      | Tyler      | Pending Ethan               |
-| 1b  | Return value         | An array of `{ role, content }` messages.                                                                                                   | Tyler      | Pending Ethan               |
-| 1c  | Roles                | The root is `user`. Each other node is `assistant`. One message per node.                                                                   | Tyler      | Pending Ethan               |
-| 2   | Instruction text     | Context assembly adds none. Issue #32 adds its own.                                                                                         | Tyler      | Pending Ethan               |
-| 3   | Depth                | Always the full path, root first. No truncation.                                                                                            | Tyler      | Ethan to read               |
-| 4   | Merged node          | All ancestors, each one time, parents before children. Tie-break: `created_at` ascending, then `id`.                                        | Tyler      | Pending Ethan               |
-| 5   | Preferences          | One `system` message at the front. One preference per line, in `created_at` order. No `system` message when there are no preferences.       | Tyler      | Pending Ethan               |
-| 6   | Deleted ancestors    | A deleted node is a cut. Exclude it and all nodes reachable only through it. Throw if the target is deleted or no path to the root remains. | Tyler      | Ethan to read, Cole confirm |
-| 7   | Token budget         | None in version one. The function does not truncate and does not throw for size.                                                            | Tyler      | Ethan to read               |
-| 8   | Rejected ancestors   | The function ignores `status`. A rejected ancestor stays in the context.                                                                    | Tyler      | Ethan to read, Cole confirm |
+| 1a  | Inputs               | `(nodes, edges, targetNodeId, preferences)`. No `rootPrompt` argument.                                                                      | Tyler      | Accepted (Ethan)            |
+| 1b  | Return value         | An array of `{ role, content }` messages.                                                                                                   | Tyler      | Accepted (Ethan)            |
+| 1c  | Roles                | The root is `user`. Each other node is `assistant`. One message per node.                                                                   | Tyler      | Accepted (Ethan)            |
+| 2   | Instruction text     | Context assembly adds none. Issue #32 adds its own.                                                                                         | Tyler      | Accepted (Ethan)            |
+| 3   | Depth                | Always the full path, root first. No truncation.                                                                                            | Tyler      | Read (Ethan)                |
+| 4   | Merged node          | All ancestors, each one time, parents before children. Tie-break: `created_at` ascending, then `id`.                                        | Tyler      | Accepted (Ethan)            |
+| 5   | Preferences          | One `system` message at the front. One preference per line, in `created_at` order. No `system` message when there are no preferences.       | Tyler      | Accepted (Ethan)            |
+| 6   | Deleted ancestors    | A deleted node is a cut. Exclude it and all nodes reachable only through it. Throw if the target is deleted or no path to the root remains. | Tyler      | Read (Ethan), Cole confirm  |
+| 7   | Token budget         | None in version one. The function does not truncate and does not throw for size.                                                            | Tyler      | Read (Ethan)                |
+| 8   | Rejected ancestors   | The function ignores `status`. A rejected ancestor stays in the context.                                                                    | Tyler      | Read (Ethan), Cole confirm  |
 | 9   | Where the cases live | This file holds inputs and expected outputs. `packages/frontend/test/context-assembly.test.js` holds one `test.todo` per case.              | Tyler      | Final                       |
 
 Decision 1a differs from the sketch in issue #31, which lists a
@@ -345,12 +346,15 @@ person before issue #31 can close.
 
 1. **Ethan.** Decisions 1a, 1b, 1c, 2, 4 and 5 were made without
    you. Do you accept them?
+
 2. **Ethan.** What does the function throw in cases 5a and 5b?
    Issue #32 must catch it.
+
 3. **Ethan and Cole.** The fixtures use the database column
    names. `docs/UML.md` uses names such as `createdAt`. Issue
    #30 has not defined the shape that `getSessionGraph` returns.
    Which names does the function receive?
+
 4. **Ethan.** What occurs when `targetNodeId` is not in `nodes`,
    when `edges` contains a cycle, or when more than one node has
    no incoming edge? Rule 2 assumes exactly one root.
