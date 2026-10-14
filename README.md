@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 <div align="center">
 
 # Pathfinders
@@ -319,6 +318,3 @@ Luis Obispo.
 Developed by the Pathfinders team.
 
 </div>
-=======
-# csc-3100-software-engineering-project
->>>>>>> 9b36384135411e02a855ceb057b7c42bc8230aa2
