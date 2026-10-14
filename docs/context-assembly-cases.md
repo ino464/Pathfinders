@@ -347,19 +347,40 @@ person before issue #31 can close.
 1. **Ethan.** Decisions 1a, 1b, 1c, 2, 4 and 5 were made without
    you. Do you accept them?
 
+   **Answer (Ethan):** Yes
+
 2. **Ethan.** What does the function throw in cases 5a and 5b?
    Issue #32 must catch it.
+
+   **Answer (Ethan):** A plain `Error` with a message should suffice, for
+   example `Cannot assemble context: target node X is deleted`.
 
 3. **Ethan and Cole.** The fixtures use the database column
    names. `docs/UML.md` uses names such as `createdAt`. Issue
    #30 has not defined the shape that `getSessionGraph` returns.
    Which names does the function receive?
+   
+   **Answer (Ethan):** The function expects snake_case field names, the
+   same as the database columns: `created_at`, `deleted_at`,
+   `parent_node_id`, `child_node_id`. `getSessionGraph` (#30) should
+   pass the rows through as stored. If the rest of the app wants
+   camelCase, #30 converts it after calling this function.
+
+   **Cole:** please confirm that #30 returns raw rows. If it doesn't,
+   tell me the field names it returns, and I'll change the function and
+   its tests to match.
 
 4. **Ethan.** What occurs when `targetNodeId` is not in `nodes`,
    when `edges` contains a cycle, or when more than one node has
    no incoming edge? Rule 2 assumes exactly one root.
+
+   **Answer (Ethan):** Throw on all three.
+
 5. **Ethan.** What is the order of two preferences with the same
    `created_at`?
+
+   **Answer (Ethan):** `id` ascending, the same tie-break as nodes.
+
 6. **Cole.** Cases 5c and 5d need a merged node to stay alive
    when one parent is deleted. That is the open `deleteSubtree`
    question in issue #30. If the answer is no, cases 5c and 5d
@@ -372,9 +393,16 @@ person before issue #31 can close.
 8. **Ethan.** `docs/UML.md` shows `Preference.normalize()` and
    `Preference.toPromptFragment()`. Neither exists. The cases
    use preference `content` as stored. Is that correct?
+
+   **Answer (Ethan):** Yes. Use preference `content` as stored
+
 9. **Ethan.** The name and the location of the function are not
    agreed. The location also depends on issue #25. The test file
    imports nothing for that reason.
+
+   **Answer (Ethan):** `assembleContext`, exported from
+   `packages/frontend/lib/context-assembly.js`. The test file
+   imports it from `../lib/context-assembly.js`
 
 ## AI usage
 
