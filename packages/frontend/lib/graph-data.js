@@ -87,3 +87,19 @@ export async function getSessionGraph(sessionId) {
     edges: liveEdges.map(toFlowEdge)
   };
 }
+
+export async function addNode(sessionId, content, position = null){
+  const supabase = await createClient();
+
+  const { data: node, error } = await supabase
+    .from("nodes")
+    .insert({
+      session_id: sessionId,
+      content,
+      position_x: position?.x ?? null,
+      position_y: position?.y ?? null
+    })
+  if (error) throw error;
+
+  return toFlowNode(node)
+}
