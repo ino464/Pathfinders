@@ -196,11 +196,9 @@ independently of the node it grows out of.
 The position columns depend on what Jonah settles on in #33, so
 if the canvas ends up computing layout instead of storing it,
 this file needs a note saying as much. Additionally,
-deleteSubtree in #30 needs a defined answer for the case where
-the node being deleted has a descendant that was merged out of
-two branches: I think the shared child should survive as long as
-its other parent is still alive, although that has not been
-agreed on yet.
+deleteSubtree in #30 keeps a shared child as long as its other
+parent is still alive. The rule is written up in
+`docs/backend-architecture.md`.
 
 ## AI usage
 
