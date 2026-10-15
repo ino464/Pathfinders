@@ -62,6 +62,25 @@ functions: `createSession`, `getSessionGraph`, `addNode`,
   canvas (#33) can be built against fixture data, and tests can
   replace the Supabase client with a fake one.
 
+### Deleting a subtree
+
+`deleteSubtree(sessionId, nodeId)` never removes rows. It sets
+`deleted_at` on the node and on the nodes below it, and
+`getSessionGraph` leaves those nodes and their edges out.
+
+A node below the deleted one is deleted only when every one of
+its live parents is being deleted. A merged node that still has
+a live parent outside the deleted branch survives, and so does
+everything under it. A merged node whose parents are all inside
+the deleted branch is deleted with it. Deleting the root deletes
+the whole session's graph.
+
+The team chose this rule on 2026-10-15, settling the open
+question in `docs/UML.md`.
+
+`addEdge` refuses an edge whose child is already an ancestor of
+its parent, so the graph never contains a loop.
+
 ## Who enforces access
 
 Row-level security is the access control. The policies from #29
