@@ -46,7 +46,9 @@ export function EmailForm({
         Password
         <input
           type="password"
-          autoComplete={newPassword ? "new-password" : "current-password"}
+          autoComplete={
+            newPassword ? "new-password" : "current-password"
+          }
           required
           minLength={6}
           value={password}
@@ -57,7 +59,10 @@ export function EmailForm({
         {submitLabel}
       </button>
       {onCancel && (
-        <button type="button" onClick={onCancel} disabled={busy}>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={busy}>
           Back
         </button>
       )}

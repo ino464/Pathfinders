@@ -73,35 +73,34 @@ export function AuthChoice({
       <button
         type="button"
         onClick={() => run(signInWithGoogle)}
-        disabled={busy}
-      >
+        disabled={busy}>
         Continue with Google
       </button>
       <button
         type="button"
         onClick={() => setMode("sign-in")}
-        disabled={busy}
-      >
+        disabled={busy}>
         Sign in with email
       </button>
       <button
         type="button"
         onClick={() => setMode("sign-up")}
-        disabled={busy}
-      >
+        disabled={busy}>
         Create an account
       </button>
       {allowGuest && (
         <button
           type="button"
           onClick={() => run(continueAsGuest)}
-          disabled={busy}
-        >
+          disabled={busy}>
           Continue as guest
         </button>
       )}
       {onCancel && (
-        <button type="button" onClick={onCancel} disabled={busy}>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={busy}>
           Back
         </button>
       )}

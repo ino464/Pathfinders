@@ -5,6 +5,9 @@ export async function POST() {
   try {
     return NextResponse.json(await finishGuestMerge());
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 400 });
+    return NextResponse.json(
+      { error: err.message },
+      { status: 400 }
+    );
   }
 }

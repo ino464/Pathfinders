@@ -15,7 +15,9 @@ export async function startGuestMerge() {
   } = await supabase.auth.getUser();
   if (error) throw error;
   if (!user?.is_anonymous) {
-    throw new Error("Only a guest can carry work into an account.");
+    throw new Error(
+      "Only a guest can carry work into an account."
+    );
   }
 
   const {
@@ -74,9 +76,8 @@ export async function finishGuestMerge() {
   if (moveError) throw moveError;
   cookieStore.delete(MERGE_COOKIE);
 
-  const { error: deleteError } = await admin.auth.admin.deleteUser(
-    guest.id
-  );
+  const { error: deleteError } =
+    await admin.auth.admin.deleteUser(guest.id);
   if (deleteError) throw deleteError;
 
   return { merged: true, movedSessions: moved.length };

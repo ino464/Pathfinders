@@ -34,7 +34,8 @@ function AccountView({ user }) {
   return (
     <div>
       <p>
-        Signed in as <span data-testid="user-email">{user.email}</span>
+        Signed in as{" "}
+        <span data-testid="user-email">{user.email}</span>
       </p>
       <button type="button" onClick={handleSignOut}>
         Sign out

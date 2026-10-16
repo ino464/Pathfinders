@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useAuth } from "./auth-provider";
 
 export function MergeNotice() {
-  const { mergeError, retryMerge, dismissMergeError } = useAuth();
+  const { mergeError, retryMerge, dismissMergeError } =
+    useAuth();
   const [busy, setBusy] = useState(false);
 
   if (!mergeError) return null;
@@ -17,11 +18,20 @@ export function MergeNotice() {
 
   return (
     <div role="alert" data-testid="merge-notice">
-      <p>Your guest work could not be moved into your account: {mergeError}</p>
-      <button type="button" onClick={handleRetry} disabled={busy}>
+      <p>
+        Your guest work could not be moved into your account:{" "}
+        {mergeError}
+      </p>
+      <button
+        type="button"
+        onClick={handleRetry}
+        disabled={busy}>
         Try again
       </button>
-      <button type="button" onClick={dismissMergeError} disabled={busy}>
+      <button
+        type="button"
+        onClick={dismissMergeError}
+        disabled={busy}>
         Dismiss
       </button>
     </div>

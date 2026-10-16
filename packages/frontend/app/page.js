@@ -7,7 +7,9 @@ export default async function Home({ searchParams }) {
     <main>
       <h1>Pathfinders</h1>
       <p>Next.js frontend is ready for development.</p>
-      {authError && <p role="alert">Sign-in failed: {authError}</p>}
+      {authError && (
+        <p role="alert">Sign-in failed: {authError}</p>
+      )}
       <CurrentUser />
     </main>
   );

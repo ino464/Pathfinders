@@ -33,7 +33,9 @@ function fakeCookies(initial = {}) {
     values,
     sets,
     get: (name) =>
-      values.has(name) ? { name, value: values.get(name) } : undefined,
+      values.has(name)
+        ? { name, value: values.get(name) }
+        : undefined,
     set: (name, value, options) => {
       sets.push({ name, value, options });
       values.set(name, value);
@@ -42,10 +44,17 @@ function fakeCookies(initial = {}) {
   };
 }
 
-function fakeClient({ user, userError = null, session = null }) {
+function fakeClient({
+  user,
+  userError = null,
+  session = null
+}) {
   return {
     auth: {
-      getUser: async () => ({ data: { user }, error: userError }),
+      getUser: async () => ({
+        data: { user },
+        error: userError
+      }),
       getSession: async () => ({ data: { session } })
     }
   };
@@ -66,7 +75,10 @@ function fakeAdmin({
         const user = tokens[token];
         return user
           ? { data: { user }, error: null }
-          : { data: { user: null }, error: new Error("invalid JWT") };
+          : {
+              data: { user: null },
+              error: new Error("invalid JWT")
+            };
       },
       admin: {
         deleteUser: async (id) => {
@@ -89,7 +101,10 @@ function fakeAdmin({
         select: async (columns) => {
           ops.push(["select", columns]);
           log.push(["from", table, ops]);
-          return { data: moveError ? null : moved, error: moveError };
+          return {
+            data: moveError ? null : moved,
+            error: moveError
+          };
         }
       };
       return builder;
@@ -159,7 +174,10 @@ describe("startGuestMerge", () => {
   test("refuses when the session does not belong to the verified user", async () => {
     fake.client = fakeClient({
       user: guest,
-      session: { access_token: "other-token", user: { id: "someone-else" } }
+      session: {
+        access_token: "other-token",
+        user: { id: "someone-else" }
+      }
     });
 
     await expect(startGuestMerge()).rejects.toThrow(
@@ -171,7 +189,9 @@ describe("startGuestMerge", () => {
 
 describe("finishGuestMerge", () => {
   beforeEach(() => {
-    fake.cookies = fakeCookies({ [MERGE_COOKIE]: "guest-token" });
+    fake.cookies = fakeCookies({
+      [MERGE_COOKIE]: "guest-token"
+    });
     fake.client = fakeClient({ user: account });
     fake.admin = fakeAdmin({
       tokens: { "guest-token": guest },
@@ -227,31 +247,41 @@ describe("finishGuestMerge", () => {
     await expect(finishGuestMerge()).rejects.toThrow(
       "The guest session expired before its work could be moved."
     );
-    expect(fake.admin.log).toEqual([["getUser", "guest-token"]]);
+    expect(fake.admin.log).toEqual([
+      ["getUser", "guest-token"]
+    ]);
     expect(fake.cookies.values.has(MERGE_COOKIE)).toBe(false);
   });
 
   test("skips when the token user is not a guest", async () => {
     fake.admin = fakeAdmin({
-      tokens: { "guest-token": { id: "other", is_anonymous: false } }
+      tokens: {
+        "guest-token": { id: "other", is_anonymous: false }
+      }
     });
 
     await expect(finishGuestMerge()).resolves.toEqual({
       merged: false,
       movedSessions: 0
     });
-    expect(fake.admin.log).toEqual([["getUser", "guest-token"]]);
+    expect(fake.admin.log).toEqual([
+      ["getUser", "guest-token"]
+    ]);
     expect(fake.cookies.values.has(MERGE_COOKIE)).toBe(false);
   });
 
   test("skips when the guest and the account are the same user", async () => {
-    fake.client = fakeClient({ user: { id: "guest-1", is_anonymous: false } });
+    fake.client = fakeClient({
+      user: { id: "guest-1", is_anonymous: false }
+    });
 
     await expect(finishGuestMerge()).resolves.toEqual({
       merged: false,
       movedSessions: 0
     });
-    expect(fake.admin.log).toEqual([["getUser", "guest-token"]]);
+    expect(fake.admin.log).toEqual([
+      ["getUser", "guest-token"]
+    ]);
   });
 
   test("keeps the guest and the token for a retry when moving the sessions fails", async () => {
@@ -260,7 +290,9 @@ describe("finishGuestMerge", () => {
       moveError: new Error("update failed")
     });
 
-    await expect(finishGuestMerge()).rejects.toThrow("update failed");
+    await expect(finishGuestMerge()).rejects.toThrow(
+      "update failed"
+    );
     expect(fake.admin.log.map(([step]) => step)).toEqual([
       "getUser",
       "from"
@@ -273,7 +305,9 @@ describe("finishGuestMerge", () => {
       tokens: { "guest-token": guest },
       moveError: new Error("update failed")
     });
-    await expect(finishGuestMerge()).rejects.toThrow("update failed");
+    await expect(finishGuestMerge()).rejects.toThrow(
+      "update failed"
+    );
 
     fake.admin = fakeAdmin({
       tokens: { "guest-token": guest },

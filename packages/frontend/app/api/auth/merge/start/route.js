@@ -6,6 +6,9 @@ export async function POST() {
     await startGuestMerge();
     return new NextResponse(null, { status: 204 });
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 400 });
+    return NextResponse.json(
+      { error: err.message },
+      { status: 400 }
+    );
   }
 }

@@ -32,19 +32,26 @@ async function postJson(path) {
 }
 
 function callbackUrl() {
-  return new URL("/auth/callback", window.location.origin).toString();
+  return new URL(
+    "/auth/callback",
+    window.location.origin
+  ).toString();
 }
 
 function mergeErrorFromUrl() {
   if (typeof window === "undefined") return null;
-  return new URL(window.location.href).searchParams.get("merge_error");
+  return new URL(window.location.href).searchParams.get(
+    "merge_error"
+  );
 }
 
 export function AuthProvider({ children }) {
   const [supabase] = useState(() => createClient());
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [mergeError, setMergeError] = useState(mergeErrorFromUrl);
+  const [mergeError, setMergeError] = useState(
+    mergeErrorFromUrl
+  );
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -128,7 +135,10 @@ export function AuthProvider({ children }) {
     if (error) throw error;
   }, [supabase, isGuest, startMerge]);
 
-  const dismissMergeError = useCallback(() => setMergeError(null), []);
+  const dismissMergeError = useCallback(
+    () => setMergeError(null),
+    []
+  );
 
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
@@ -148,8 +158,7 @@ export function AuthProvider({ children }) {
         retryMerge: finishMerge,
         dismissMergeError,
         signOut
-      }}
-    >
+      }}>
       {children}
     </AuthContext.Provider>
   );

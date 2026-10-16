@@ -23,7 +23,8 @@ export async function GET(request) {
   const next = safeNext(searchParams.get("next"));
 
   const providerError =
-    searchParams.get("error_description") ?? searchParams.get("error");
+    searchParams.get("error_description") ??
+    searchParams.get("error");
   if (providerError) {
     return redirectHome(origin, "auth_error", providerError);
   }
@@ -32,7 +33,8 @@ export async function GET(request) {
   let error = new Error("Missing code or token in the link.");
 
   if (code) {
-    ({ error } = await supabase.auth.exchangeCodeForSession(code));
+    ({ error } =
+      await supabase.auth.exchangeCodeForSession(code));
   } else if (tokenHash && type) {
     ({ error } = await supabase.auth.verifyOtp({
       type,

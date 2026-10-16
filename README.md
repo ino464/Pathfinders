@@ -102,8 +102,8 @@ Supabase PostgreSQL ── RLS checks every row
 Model requests are sent through the server so that the LLM API
 key is never exposed to the browser.
 
-Sign-in, and moving a guest's work into an account, are described
-in [docs/auth.md](docs/auth.md).
+Sign-in, and moving a guest's work into an account, are
+described in [docs/auth.md](docs/auth.md).
 
 Context assembly is kept separate from the visual canvas. This
 allows the team to test and improve the information sent to the

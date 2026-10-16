@@ -12,12 +12,10 @@ vi.mock("../lib/guest-merge", () => ({
   finishGuestMerge: () => fake.finish()
 }));
 
-const { POST: start } = await import(
-  "../app/api/auth/merge/start/route"
-);
-const { POST: finish } = await import(
-  "../app/api/auth/merge/finish/route"
-);
+const { POST: start } =
+  await import("../app/api/auth/merge/start/route");
+const { POST: finish } =
+  await import("../app/api/auth/merge/finish/route");
 
 describe("merge routes", () => {
   beforeEach(() => {
@@ -36,7 +34,9 @@ describe("merge routes", () => {
 
   test("start answers 400 with the reason when it fails", async () => {
     fake.start = vi.fn(async () => {
-      throw new Error("Only a guest can carry work into an account.");
+      throw new Error(
+        "Only a guest can carry work into an account."
+      );
     });
 
     const response = await start();
@@ -65,6 +65,8 @@ describe("merge routes", () => {
     const response = await finish();
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "update failed" });
+    expect(await response.json()).toEqual({
+      error: "update failed"
+    });
   });
 });

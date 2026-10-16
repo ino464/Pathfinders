@@ -1,8 +1,8 @@
 # Authentication
 
-This file explains how people sign in to Pathfinders: as a guest,
-with email and a password, or with Google, and how a guest's work
-moves into an account when they sign in.
+This file explains how people sign in to Pathfinders: as a
+guest, with email and a password, or with Google, and how a
+guest's work moves into an account when they sign in.
 
 ## The first visit
 
@@ -23,12 +23,12 @@ the app through `useAuth()`.
 
 ## Guests
 
-"Continue as guest" calls `signInAnonymously()`. Supabase creates
-a real row in `auth.users` with `is_anonymous` set to true, and
-the guest gets the `authenticated` role, so the row-level security
-policies treat them like any other user: they can only reach
-their own sessions and the nodes, edges and preferences inside
-them.
+"Continue as guest" calls `signInAnonymously()`. Supabase
+creates a real row in `auth.users` with `is_anonymous` set to
+true, and the guest gets the `authenticated` role, so the
+row-level security policies treat them like any other user: they
+can only reach their own sessions and the nodes, edges and
+preferences inside them.
 
 Supabase limits anonymous sign-ins per IP address, which is why
 the call happens in the browser rather than on the server, where
@@ -43,49 +43,51 @@ button. They get "Save your work to an account" instead.
 ## Email and password
 
 - **Create an account** calls `signUp`. With email confirmation
-  off, which is the local default (`enable_confirmations = false`),
-  the person is signed in straight away. With it on, Supabase
-  emails a link and the person is signed in when they open it.
+  off, which is the local default
+  (`enable_confirmations = false`), the person is signed in
+  straight away. With it on, Supabase emails a link and the
+  person is signed in when they open it.
 - **Sign in with email** calls `signInWithPassword`.
 
 ## Google
 
-**Continue with Google** calls `signInWithOAuth`. The browser goes
-to Google, then to Supabase, then back to
-`packages/frontend/app/auth/callback/route.js`, which exchanges the
-code for a session cookie. The same route handles links from
+**Continue with Google** calls `signInWithOAuth`. The browser
+goes to Google, then to Supabase, then back to
+`packages/frontend/app/auth/callback/route.js`, which exchanges
+the code for a session cookie. The same route handles links from
 Supabase emails.
 
 Setting it up:
 
 1. In Google Cloud Console, create an OAuth client of type "Web
    application" and add these authorized redirect URIs:
-   - `http://127.0.0.1:54321/auth/v1/callback` for the local stack
-   - `https://<project-ref>.supabase.co/auth/v1/callback` for the
-     hosted project
-2. **Local stack:** the client id is in `[auth.external.google]` in
-   `supabase/config.toml`. Put the client secret in
-   `supabase/.env` as `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`. That
-   file is gitignored. Then run `npx supabase stop` and
+   - `http://127.0.0.1:54321/auth/v1/callback` for the local
+     stack
+   - `https://<project-ref>.supabase.co/auth/v1/callback` for
+     the hosted project
+2. **Local stack:** the client id is in `[auth.external.google]`
+   in `supabase/config.toml`. Put the client secret in
+   `supabase/.env` as `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`.
+   That file is gitignored. Then run `npx supabase stop` and
    `npx supabase start`.
 3. **Hosted:** enable Google under Authentication, Sign In /
    Providers with the same client id and secret.
 
 Supabase only redirects to addresses on its allow list. Locally
 that's `additional_redirect_urls` in `config.toml`, which covers
-`http://localhost:3000/**` and `http://127.0.0.1:3000/**`. For the
-hosted project, add the same addresses and the deployed site
+`http://localhost:3000/**` and `http://127.0.0.1:3000/**`. For
+the hosted project, add the same addresses and the deployed site
 under Authentication, URL Configuration.
 
 ## Moving a guest's work into an account
 
-When a guest signs in or creates an account, by any method, their
-sessions move into that account and the guest user is deleted.
-New and existing accounts go through the same steps.
+When a guest signs in or creates an account, by any method,
+their sessions move into that account and the guest user is
+deleted. New and existing accounts go through the same steps.
 
 Ownership is stored in one place, `sessions.user_id`. Nodes,
-edges and preferences reach their owner through their session, so
-moving the sessions moves everything.
+edges and preferences reach their owner through their session,
+so moving the sessions moves everything.
 
 The hard part is proving that the person owns both users.
 Row-level security only lets a user touch their own rows, so the
@@ -97,22 +99,22 @@ server (`packages/frontend/lib/guest-merge.js`):
 1. Before signing in, the browser refreshes the guest's session
    and calls `POST /api/auth/merge/start`. The server checks the
    cookie belongs to a guest and copies the guest's access token
-   into an httpOnly cookie, `pf_merge_from`, which lasts an hour,
-   the same as the token.
+   into an httpOnly cookie, `pf_merge_from`, which lasts an
+   hour, the same as the token.
 2. The person signs in or creates an account. The session cookie
    now holds the account.
-3. The merge is finished by `POST /api/auth/merge/finish` (email),
-   or by the callback route (Google, and email links when
-   confirmation is on). The server asks Supabase to verify the
-   saved token. That only succeeds for a real, unexpired guest, so
-   a hand-edited cookie gets nowhere. It then moves the guest's
-   sessions to the account and deletes the guest.
+3. The merge is finished by `POST /api/auth/merge/finish`
+   (email), or by the callback route (Google, and email links
+   when confirmation is on). The server asks Supabase to verify
+   the saved token. That only succeeds for a real, unexpired
+   guest, so a hand-edited cookie gets nowhere. It then moves
+   the guest's sessions to the account and deletes the guest.
 
 The refresh happens in the browser on purpose. Supabase rotates
 refresh tokens, so if the server refreshed instead, the browser
-would be left holding a revoked token. If sign-in then failed, the
-browser's next refresh would end the guest's session and lose
-their work.
+would be left holding a revoked token. If sign-in then failed,
+the browser's next refresh would end the guest's session and
+lose their work.
 
 The sessions move before the guest is deleted. Deleting first
 would remove the sessions through `on delete cascade`. If the
@@ -140,8 +142,8 @@ access layer, still acts as the signed-in user.
 ## Still open
 
 Guests who never sign in and lose their cookie, by clearing
-browser data or switching devices, cannot get their sessions back.
-Those users accumulate in `auth.users`. A scheduled job could
-delete old anonymous users later, and the `on delete cascade` on
-`sessions.user_id` would remove their sessions and everything
-inside them at the same time.
+browser data or switching devices, cannot get their sessions
+back. Those users accumulate in `auth.users`. A scheduled job
+could delete old anonymous users later, and the
+`on delete cascade` on `sessions.user_id` would remove their
+sessions and everything inside them at the same time.

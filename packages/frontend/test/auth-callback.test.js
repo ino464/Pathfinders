@@ -17,7 +17,10 @@ vi.mock("../lib/guest-merge", () => ({
 
 const { GET } = await import("../app/auth/callback/route");
 
-function fakeClient({ exchangeError = null, verifyError = null } = {}) {
+function fakeClient({
+  exchangeError = null,
+  verifyError = null
+} = {}) {
   const calls = [];
   return {
     calls,
@@ -44,7 +47,9 @@ async function callback(query) {
 describe("GET /auth/callback", () => {
   beforeEach(() => {
     fake.client = fakeClient();
-    fake.finishGuestMerge = vi.fn(async () => ({ merged: false }));
+    fake.finishGuestMerge = vi.fn(async () => ({
+      merged: false
+    }));
   });
 
   test("exchanges the code, finishes any merge and goes home", async () => {
@@ -58,13 +63,19 @@ describe("GET /auth/callback", () => {
   });
 
   test("follows a safe next path", async () => {
-    const location = await callback("?code=abc&next=/set-password");
+    const location = await callback(
+      "?code=abc&next=/set-password"
+    );
 
-    expect(location.href).toBe("http://localhost:3000/set-password");
+    expect(location.href).toBe(
+      "http://localhost:3000/set-password"
+    );
   });
 
   test("ignores a next that points at another site", async () => {
-    const location = await callback("?code=abc&next=//evil.example");
+    const location = await callback(
+      "?code=abc&next=//evil.example"
+    );
 
     expect(location.href).toBe("http://localhost:3000/");
   });
