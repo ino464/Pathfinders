@@ -31,7 +31,7 @@ export async function startGuestMerge() {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 600
+    maxAge: 3600
   });
 }
 
@@ -39,7 +39,6 @@ export async function finishGuestMerge() {
   const cookieStore = await cookies();
   const guestToken = cookieStore.get(MERGE_COOKIE)?.value;
   if (!guestToken) return { merged: false, movedSessions: 0 };
-  cookieStore.delete(MERGE_COOKIE);
 
   const supabase = await createClient();
   const {
@@ -56,8 +55,14 @@ export async function finishGuestMerge() {
     data: { user: guest },
     error: guestError
   } = await admin.auth.getUser(guestToken);
-  if (guestError) throw guestError;
+  if (guestError) {
+    cookieStore.delete(MERGE_COOKIE);
+    throw new Error(
+      "The guest session expired before its work could be moved."
+    );
+  }
   if (!guest.is_anonymous || guest.id === account.id) {
+    cookieStore.delete(MERGE_COOKIE);
     return { merged: false, movedSessions: 0 };
   }
 
@@ -67,6 +72,7 @@ export async function finishGuestMerge() {
     .eq("user_id", guest.id)
     .select("id");
   if (moveError) throw moveError;
+  cookieStore.delete(MERGE_COOKIE);
 
   const { error: deleteError } = await admin.auth.admin.deleteUser(
     guest.id

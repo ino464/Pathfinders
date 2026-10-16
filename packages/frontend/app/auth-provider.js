@@ -12,13 +12,13 @@ import { createClient } from "../lib/supabase";
 const AuthContext = createContext({
   user: null,
   loading: true,
+  mergeError: null,
   continueAsGuest: async () => {},
   signInWithEmail: async () => {},
   signInWithGoogle: async () => {},
-  linkGoogleToGuest: async () => {},
   signUpWithEmail: async () => {},
-  addEmailToGuest: async () => {},
-  setPassword: async () => {},
+  retryMerge: async () => {},
+  dismissMergeError: () => {},
   signOut: async () => {}
 });
 
@@ -31,16 +31,28 @@ async function postJson(path) {
   throw new Error(body.error ?? `Request to ${path} failed.`);
 }
 
-function callbackUrl(next) {
-  const url = new URL("/auth/callback", window.location.origin);
-  if (next) url.searchParams.set("next", next);
-  return url.toString();
+function callbackUrl() {
+  return new URL("/auth/callback", window.location.origin).toString();
+}
+
+function mergeErrorFromUrl() {
+  if (typeof window === "undefined") return null;
+  return new URL(window.location.href).searchParams.get("merge_error");
 }
 
 export function AuthProvider({ children }) {
   const [supabase] = useState(() => createClient());
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [mergeError, setMergeError] = useState(mergeErrorFromUrl);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("merge_error")) {
+      url.searchParams.delete("merge_error");
+      window.history.replaceState(null, "", url);
+    }
+  }, []);
 
   useEffect(() => {
     const {
@@ -57,17 +69,26 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe();
   }, [supabase]);
 
-  const continueAsGuest = useCallback(async () => {
-    const { error } = await supabase.auth.signInAnonymously();
-    if (error) throw error;
-  }, [supabase]);
-
   const isGuest = Boolean(user?.is_anonymous);
 
   const startMerge = useCallback(async () => {
     const { error } = await supabase.auth.refreshSession();
     if (error) throw error;
     await postJson("/api/auth/merge/start");
+  }, [supabase]);
+
+  const finishMerge = useCallback(async () => {
+    try {
+      await postJson("/api/auth/merge/finish");
+      setMergeError(null);
+    } catch (err) {
+      setMergeError(err.message);
+    }
+  }, []);
+
+  const continueAsGuest = useCallback(async () => {
+    const { error } = await supabase.auth.signInAnonymously();
+    if (error) throw error;
   }, [supabase]);
 
   const signInWithEmail = useCallback(
@@ -78,9 +99,24 @@ export function AuthProvider({ children }) {
         password
       });
       if (error) throw error;
-      if (isGuest) await postJson("/api/auth/merge/finish");
+      if (isGuest) await finishMerge();
     },
-    [supabase, isGuest, startMerge]
+    [supabase, isGuest, startMerge, finishMerge]
+  );
+
+  const signUpWithEmail = useCallback(
+    async (email, password) => {
+      if (isGuest) await startMerge();
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: callbackUrl() }
+      });
+      if (error) throw error;
+      if (isGuest && data.session) await finishMerge();
+      return { needsConfirmation: !data.session };
+    },
+    [supabase, isGuest, startMerge, finishMerge]
   );
 
   const signInWithGoogle = useCallback(async () => {
@@ -92,50 +128,7 @@ export function AuthProvider({ children }) {
     if (error) throw error;
   }, [supabase, isGuest, startMerge]);
 
-  const linkGoogleToGuest = useCallback(async () => {
-    const { error } = await supabase.auth.linkIdentity({
-      provider: "google",
-      options: { redirectTo: callbackUrl() }
-    });
-    if (error) throw error;
-  }, [supabase]);
-
-  const signUpWithEmail = useCallback(
-    async (email, password) => {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: callbackUrl() }
-      });
-      if (error) throw error;
-      return { needsConfirmation: !data.session };
-    },
-    [supabase]
-  );
-
-  const addEmailToGuest = useCallback(
-    async (email) => {
-      const { error } = await supabase.auth.updateUser(
-        { email },
-        { emailRedirectTo: callbackUrl("/set-password") }
-      );
-      if (error?.code === "email_exists") {
-        throw new Error(
-          'That email already has an account. Choose "I already have an account" to sign in and bring your guest work with you.'
-        );
-      }
-      if (error) throw error;
-    },
-    [supabase]
-  );
-
-  const setPassword = useCallback(
-    async (password) => {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
-    },
-    [supabase]
-  );
+  const dismissMergeError = useCallback(() => setMergeError(null), []);
 
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
@@ -147,13 +140,13 @@ export function AuthProvider({ children }) {
       value={{
         user,
         loading,
+        mergeError,
         continueAsGuest,
         signInWithEmail,
         signInWithGoogle,
-        linkGoogleToGuest,
         signUpWithEmail,
-        addEmailToGuest,
-        setPassword,
+        retryMerge: finishMerge,
+        dismissMergeError,
         signOut
       }}
     >

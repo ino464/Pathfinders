@@ -4,8 +4,13 @@ import { useState } from "react";
 import { useAuth } from "./auth-provider";
 import { EmailForm } from "./email-form";
 
-export function AuthChoice() {
+export function AuthChoice({
+  title = "Get started",
+  allowGuest = true,
+  onCancel
+}) {
   const {
+    user,
     continueAsGuest,
     signInWithEmail,
     signInWithGoogle,
@@ -14,6 +19,7 @@ export function AuthChoice() {
   const [mode, setMode] = useState("choice");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const isGuest = Boolean(user?.is_anonymous);
 
   async function run(action) {
     setBusy(true);
@@ -44,13 +50,16 @@ export function AuthChoice() {
       <EmailForm
         title="Create an account"
         submitLabel="Create account"
+        newPassword
         onSubmit={async ({ email, password }) => {
           const { needsConfirmation } = await signUpWithEmail(
             email,
             password
           );
           if (needsConfirmation) {
-            return `Check ${email} for a link to confirm your account.`;
+            return isGuest
+              ? `Check ${email} for a link to confirm your account. Your guest work moves over when you open it.`
+              : `Check ${email} for a link to confirm your account.`;
           }
         }}
         onCancel={() => setMode("choice")}
@@ -60,7 +69,7 @@ export function AuthChoice() {
 
   return (
     <section data-testid="auth-choice">
-      <h2>Get started</h2>
+      <h2>{title}</h2>
       <button
         type="button"
         onClick={() => run(signInWithGoogle)}
@@ -68,19 +77,34 @@ export function AuthChoice() {
       >
         Continue with Google
       </button>
-      <button type="button" onClick={() => setMode("sign-in")}>
+      <button
+        type="button"
+        onClick={() => setMode("sign-in")}
+        disabled={busy}
+      >
         Sign in with email
-      </button>
-      <button type="button" onClick={() => setMode("sign-up")}>
-        Create an account
       </button>
       <button
         type="button"
-        onClick={() => run(continueAsGuest)}
+        onClick={() => setMode("sign-up")}
         disabled={busy}
       >
-        Continue as guest
+        Create an account
       </button>
+      {allowGuest && (
+        <button
+          type="button"
+          onClick={() => run(continueAsGuest)}
+          disabled={busy}
+        >
+          Continue as guest
+        </button>
+      )}
+      {onCancel && (
+        <button type="button" onClick={onCancel} disabled={busy}>
+          Back
+        </button>
+      )}
       {error && <p role="alert">{error}</p>}
     </section>
   );

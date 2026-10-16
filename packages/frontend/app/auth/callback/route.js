@@ -2,16 +2,17 @@ import { NextResponse } from "next/server";
 import { createClient } from "../../../lib/supabase-server";
 import { finishGuestMerge } from "../../../lib/guest-merge";
 
-const FRIENDLY_ERRORS = {
-  identity_already_exists:
-    "That Google account already has a Pathfinders account. Choose \"I already have an account\" to sign in and bring your guest work with you."
-};
-
 function safeNext(next) {
   if (next && next.startsWith("/") && !next.startsWith("//")) {
     return next;
   }
   return "/";
+}
+
+function redirectHome(origin, param, message) {
+  const url = new URL("/", origin);
+  url.searchParams.set(param, message);
+  return NextResponse.redirect(url);
 }
 
 export async function GET(request) {
@@ -22,16 +23,15 @@ export async function GET(request) {
   const next = safeNext(searchParams.get("next"));
 
   const providerError =
-    FRIENDLY_ERRORS[searchParams.get("error_code")] ??
-    searchParams.get("error_description") ??
-    searchParams.get("error");
+    searchParams.get("error_description") ?? searchParams.get("error");
+  if (providerError) {
+    return redirectHome(origin, "auth_error", providerError);
+  }
 
   const supabase = await createClient();
   let error = new Error("Missing code or token in the link.");
 
-  if (providerError) {
-    error = new Error(providerError);
-  } else if (code) {
+  if (code) {
     ({ error } = await supabase.auth.exchangeCodeForSession(code));
   } else if (tokenHash && type) {
     ({ error } = await supabase.auth.verifyOtp({
@@ -40,18 +40,14 @@ export async function GET(request) {
     }));
   }
 
-  if (!error) {
-    try {
-      await finishGuestMerge();
-    } catch (err) {
-      error = err;
-    }
+  if (error) {
+    return redirectHome(origin, "auth_error", error.message);
   }
 
-  if (error) {
-    const url = new URL("/", origin);
-    url.searchParams.set("auth_error", error.message);
-    return NextResponse.redirect(url);
+  try {
+    await finishGuestMerge();
+  } catch (err) {
+    return redirectHome(origin, "merge_error", err.message);
   }
 
   return NextResponse.redirect(new URL(next, origin));

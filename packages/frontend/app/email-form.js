@@ -5,8 +5,7 @@ import { useState } from "react";
 export function EmailForm({
   title,
   submitLabel,
-  askEmail = true,
-  askPassword = true,
+  newPassword = false,
   onSubmit,
   onCancel
 }) {
@@ -33,31 +32,27 @@ export function EmailForm({
   return (
     <form onSubmit={handleSubmit}>
       <h2>{title}</h2>
-      {askEmail && (
-        <label>
-          Email
-          <input
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </label>
-      )}
-      {askPassword && (
-        <label>
-          Password
-          <input
-            type="password"
-            autoComplete={askEmail ? "current-password" : "new-password"}
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </label>
-      )}
+      <label>
+        Email
+        <input
+          type="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </label>
+      <label>
+        Password
+        <input
+          type="password"
+          autoComplete={newPassword ? "new-password" : "current-password"}
+          required
+          minLength={6}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </label>
       <button type="submit" disabled={busy}>
         {submitLabel}
       </button>

@@ -108,36 +108,29 @@ describe("GET /auth/callback", () => {
     expect(fake.finishGuestMerge).not.toHaveBeenCalled();
   });
 
-  test("explains a Google account that already has an account", async () => {
-    const location = await callback(
-      "?error=server_error&error_code=identity_already_exists&error_description=Identity+is+already+linked+to+another+user"
-    );
-
-    expect(fake.client.calls).toEqual([]);
-    expect(location.searchParams.get("auth_error")).toContain(
-      "I already have an account"
-    );
-  });
-
-  test("passes on other provider errors", async () => {
+  test("passes on a provider error without exchanging or merging", async () => {
     const location = await callback(
       "?error=access_denied&error_description=User+cancelled"
     );
 
+    expect(fake.client.calls).toEqual([]);
+    expect(fake.finishGuestMerge).not.toHaveBeenCalled();
     expect(location.searchParams.get("auth_error")).toBe(
       "User cancelled"
     );
   });
 
-  test("reports a failed merge", async () => {
+  test("reports a failed merge separately so the page can offer a retry", async () => {
     fake.finishGuestMerge = vi.fn(async () => {
       throw new Error("update failed");
     });
 
     const location = await callback("?code=abc");
 
-    expect(location.searchParams.get("auth_error")).toBe(
+    expect(location.pathname).toBe("/");
+    expect(location.searchParams.get("merge_error")).toBe(
       "update failed"
     );
+    expect(location.searchParams.has("auth_error")).toBe(false);
   });
 });

@@ -119,7 +119,7 @@ describe("startGuestMerge", () => {
           secure: false,
           sameSite: "lax",
           path: "/",
-          maxAge: 600
+          maxAge: 3600
         }
       }
     ]);
@@ -211,21 +211,24 @@ describe("finishGuestMerge", () => {
     expect(fake.cookies.values.has(MERGE_COOKIE)).toBe(false);
   });
 
-  test("refuses when the signed in user is still a guest", async () => {
+  test("refuses when the signed in user is still a guest and keeps the token for a retry", async () => {
     fake.client = fakeClient({ user: guest });
 
     await expect(finishGuestMerge()).rejects.toThrow(
       "Sign in to an account before merging."
     );
     expect(fake.admin.log).toEqual([]);
-    expect(fake.cookies.values.has(MERGE_COOKIE)).toBe(false);
+    expect(fake.cookies.values.has(MERGE_COOKIE)).toBe(true);
   });
 
-  test("refuses a guest token Supabase does not accept", async () => {
+  test("gives up on a guest token Supabase does not accept", async () => {
     fake.admin = fakeAdmin({ tokens: {} });
 
-    await expect(finishGuestMerge()).rejects.toThrow("invalid JWT");
+    await expect(finishGuestMerge()).rejects.toThrow(
+      "The guest session expired before its work could be moved."
+    );
     expect(fake.admin.log).toEqual([["getUser", "guest-token"]]);
+    expect(fake.cookies.values.has(MERGE_COOKIE)).toBe(false);
   });
 
   test("skips when the token user is not a guest", async () => {
@@ -238,6 +241,7 @@ describe("finishGuestMerge", () => {
       movedSessions: 0
     });
     expect(fake.admin.log).toEqual([["getUser", "guest-token"]]);
+    expect(fake.cookies.values.has(MERGE_COOKIE)).toBe(false);
   });
 
   test("skips when the guest and the account are the same user", async () => {
@@ -250,7 +254,7 @@ describe("finishGuestMerge", () => {
     expect(fake.admin.log).toEqual([["getUser", "guest-token"]]);
   });
 
-  test("keeps the guest when moving the sessions fails", async () => {
+  test("keeps the guest and the token for a retry when moving the sessions fails", async () => {
     fake.admin = fakeAdmin({
       tokens: { "guest-token": guest },
       moveError: new Error("update failed")
@@ -261,5 +265,24 @@ describe("finishGuestMerge", () => {
       "getUser",
       "from"
     ]);
+    expect(fake.cookies.values.has(MERGE_COOKIE)).toBe(true);
+  });
+
+  test("a retry after a failed move finishes the merge", async () => {
+    fake.admin = fakeAdmin({
+      tokens: { "guest-token": guest },
+      moveError: new Error("update failed")
+    });
+    await expect(finishGuestMerge()).rejects.toThrow("update failed");
+
+    fake.admin = fakeAdmin({
+      tokens: { "guest-token": guest },
+      moved: [{ id: "s1" }]
+    });
+    await expect(finishGuestMerge()).resolves.toEqual({
+      merged: true,
+      movedSessions: 1
+    });
+    expect(fake.cookies.values.has(MERGE_COOKIE)).toBe(false);
   });
 });
