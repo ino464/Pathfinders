@@ -47,7 +47,9 @@ session. How visitors get that session in the first place is in
 The data access layer is a single module,
 `packages/frontend/lib/graph-data.js`, built in issue #30. It is
 the only code in the app that reads or writes the `sessions`,
-`nodes`, `edges` and `preferences` tables. It exports six
+`nodes`, `edges` and `preferences` tables, apart from moving a
+guest's sessions into an account when they sign in
+(`lib/guest-merge.js`, see `docs/auth.md`). It exports six
 functions: `createSession`, `getSessionGraph`, `addNode`,
 `addEdge`, `updateNodeStatus` and `deleteSubtree`.
 
@@ -87,8 +89,11 @@ Row-level security is the access control. The policies from #29
 let a user read and change a session only when
 `sessions.user_id` is their own id, and nodes, edges and
 preferences resolve ownership through their session. The data
-access layer does not check ownership itself, and the app never
-uses the service-role key, which would bypass these policies.
+access layer does not check ownership itself, and it never uses
+the secret key, which would bypass these policies. The only code
+that uses the secret key is the guest merge in
+`lib/guest-merge.js`, which needs it to move sessions from one
+user to another.
 
 The publishable key and the user's session are in the browser by
 design, so someone could call Supabase directly instead of going

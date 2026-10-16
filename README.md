@@ -88,7 +88,7 @@ the original alternatives later.
 ```text
 Browser
   ├── React Flow canvas
-  └── Supabase Auth ─────────► anonymous sign-in, session cookie
+  └── Supabase Auth ─────────► guest, email or Google sign-in, session cookie
         │
         ▼  requests carry the session cookie
 Next.js server (route handlers, server actions)
@@ -101,6 +101,9 @@ Supabase PostgreSQL ── RLS checks every row
 
 Model requests are sent through the server so that the LLM API
 key is never exposed to the browser.
+
+Sign-in, and moving a guest's work into an account, are
+described in [docs/auth.md](docs/auth.md).
 
 Context assembly is kept separate from the visual canvas. This
 allows the team to test and improve the information sent to the
@@ -175,6 +178,13 @@ API provider.
    `NEXT_PUBLIC_SUPABASE_URL` and the publishable key as
    `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Use the base API URL,
    such as `http://127.0.0.1:54321`, not the storage or S3 URL.
+   Also copy the secret key as `SUPABASE_SECRET_KEY`. Only the
+   server uses it, to move a guest's work into an account.
+
+   To try Google sign-in locally, also put the Google client
+   secret in `supabase/.env` as
+   `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET` and restart Supabase.
+   See [docs/auth.md](docs/auth.md#google).
 
 7. Start the development server:
 
@@ -183,8 +193,8 @@ API provider.
    ```
 
 8. Open [http://localhost:3000](http://localhost:3000) in your
-   browser. The app signs you in anonymously on first load, and
-   the page shows your user id.
+   browser. Choose Continue with Google, sign in or create an
+   account with email, or continue as a guest.
 
 Local Supabase Studio, where you can browse the tables, runs at
 [http://127.0.0.1:54323](http://127.0.0.1:54323).
@@ -221,9 +231,9 @@ The required environment variables are documented in
 Do not commit `packages/frontend/.env.local` or any real API
 keys to the repository.
 
-The LLM API key must only be accessed through server-side code.
-It should never be included in a client component or sent to the
-browser.
+The LLM API key and `SUPABASE_SECRET_KEY` must only be accessed
+through server-side code. They should never be included in a
+client component or sent to the browser.
 
 ## Development Commands
 

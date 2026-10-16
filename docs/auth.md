@@ -1,110 +1,164 @@
 # Authentication
 
-This file explains how people are signed in to Pathfinders today
-and how they will move to email login in US-04.
+This file explains how people sign in to Pathfinders: as a
+guest, with email and a password, or with Google, and how a
+guest's work moves into an account when they sign in.
 
-## Anonymous users
+## The first visit
 
-Every visitor is signed in anonymously the first time the app
-loads, so there is no login screen. Supabase creates a real row
-in `auth.users` with `is_anonymous` set to true and returns a
-session, which `@supabase/ssr` keeps in a cookie. Later visits
-from the same browser reuse that cookie, so the person stays the
-same user, and `packages/frontend/proxy.js` refreshes the access
-token whenever it expires.
+A visitor without a session cookie sees a choice
+(`packages/frontend/app/auth-choice.js`):
 
-Anonymous users get the `authenticated` role, which means the
-row-level security policies treat them exactly like any other
-signed-in user: `sessions.user_id` is their id, and they can
-only reach their own sessions along with the nodes, edges and
+- **Continue with Google**
+- **Sign in with email**
+- **Create an account**
+- **Continue as guest**
+
+Returning visitors who already have a session cookie skip the
+choice. `@supabase/ssr` keeps the session in a cookie, and
+`packages/frontend/proxy.js` refreshes the access token whenever
+it expires. `packages/frontend/app/auth-provider.js` holds the
+signed-in user and exposes every sign-in action to the rest of
+the app through `useAuth()`.
+
+## Guests
+
+"Continue as guest" calls `signInAnonymously()`. Supabase
+creates a real row in `auth.users` with `is_anonymous` set to
+true, and the guest gets the `authenticated` role, so the
+row-level security policies treat them like any other user: they
+can only reach their own sessions and the nodes, edges and
 preferences inside them.
 
-Anonymous sign-ins have to be enabled in two places, in
-`supabase/config.toml` for the local stack and under
-Authentication, Sign In / Providers in the hosted project's
-dashboard. Supabase limits anonymous sign-ins per IP address,
-which is why the sign-in call happens in the browser
-(`packages/frontend/app/auth-provider.js`) rather than on the
-server, where every visitor would share a single IP.
+Supabase limits anonymous sign-ins per IP address, which is why
+the call happens in the browser rather than on the server, where
+every visitor would share a single IP. Anonymous sign-ins are
+enabled in `supabase/config.toml` for the local stack and under
+Authentication, Sign In / Providers in the hosted dashboard.
 
-## Choosing on first visit
+A guest has no email or password, so if they lose their cookie
+they cannot get back in. For that reason guests get no sign out
+button. They get "Save your work to an account" instead.
 
-For now the app signs every visitor in anonymously as soon as it
-loads, which is what #29 asks for. Once email login exists in
-US-04, the first visit should offer a choice instead of forcing
-an anonymous start: create an account, sign in to an existing
-one, or continue without an account. Only the last option calls
-`signInAnonymously()`, which means the automatic call in
-`auth-provider.js` moves behind that button. Returning visitors
-who already have a session cookie skip the choice entirely, and
-someone who creates an account straight away is an ordinary
-email user from the start, so they never need the upgrade or
-merge described below.
+## Email and password
 
-## Upgrading to email
+- **Create an account** calls `signUp`. With email confirmation
+  off, which is the local default
+  (`enable_confirmations = false`), the person is signed in
+  straight away. With it on, Supabase emails a link and the
+  person is signed in when they open it.
+- **Sign in with email** calls `signInWithPassword`.
 
-Upgrading does not create a new user. It attaches an email to
-the anonymous user that already exists, so the user id stays the
-same, every row that points at it stays where it is, and nothing
-has to be migrated.
+## Forgot password
 
-1. The signed-in anonymous user enters an email address, and the
-   app calls `supabase.auth.updateUser({ email })`.
-2. Supabase sends a confirmation link. Once the person follows
-   it, the same `auth.users` row has an email and `is_anonymous`
-   becomes false. On the local stack the email is not sent
-   anywhere; it can be read in the local mail viewer at
-   http://127.0.0.1:54324.
-3. The app calls `supabase.auth.updateUser({ password })` so the
-   person can sign in from another device.
+"Forgot password?" under the email sign-in form calls
+`resetPasswordForEmail`. Supabase emails a link that goes
+through `/auth/callback` to `/set-password`
+(`packages/frontend/app/set-password/`), where the person
+chooses a new password with `updateUser({ password })`. Locally
+the email can be read at http://127.0.0.1:54324.
 
-## When the email already has an account
+The link only works in the browser that asked for it, because
+`@supabase/ssr` keeps a PKCE code verifier in that browser's
+cookies. Opened anywhere else, the page says the link has
+expired and offers a new one. A guest who resets the password of
+an existing account gets the same merge as signing in.
 
-If the email already belongs to an account, for example someone
-who upgraded on a laptop and is now anonymous on a phone,
-`updateUser` fails. In that case we sign them in to the existing
-account and merge the anonymous work into it.
+## Google
 
-The merge itself is small because of how ownership is stored.
-Only `sessions.user_id` records who owns what, and nodes, edges
-and preferences reach their owner through their session, so
-moving every session to the existing account moves everything
-inside it as well:
+**Continue with Google** calls `signInWithOAuth`. The browser
+goes to Google, then to Supabase, then back to
+`packages/frontend/app/auth/callback/route.js`, which exchanges
+the code for a session cookie. The same route handles links from
+Supabase emails.
 
-```sql
-update public.sessions
-set user_id = <existing account id>
-where user_id = <anonymous id>;
-```
+Setting it up:
 
-The difficult part is proving that the person owns both
-accounts. Row-level security only lets a user touch rows where
-`user_id` is their own id, so the browser cannot move rows from
-one user to another, and the server must never trust an
-anonymous id that the browser simply sends it, since anyone
-could then claim someone else's sessions. The merge therefore
-runs on the server:
+1. In Google Cloud Console, create an OAuth client of type "Web
+   application" and add these authorized redirect URIs:
+   - `http://127.0.0.1:54321/auth/v1/callback` for the local
+     stack
+   - `https://<project-ref>.supabase.co/auth/v1/callback` for
+     the hosted project
+2. **Local stack:** the client id is in `[auth.external.google]`
+   in `supabase/config.toml`. Put the client secret in
+   `supabase/.env` as `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`.
+   That file is gitignored. Then run `npx supabase stop` and
+   `npx supabase start`.
+3. **Hosted:** enable Google under Authentication, Sign In /
+   Providers with the same client id and secret.
 
-1. Before signing in to the existing account, the browser keeps
-   the anonymous user's access token.
-2. The person signs in with their email and password, and the
-   cookie now holds the existing account.
-3. The browser sends the kept anonymous token to a server route.
-4. The server asks Supabase to verify that token and checks that
-   it belongs to an anonymous user. It then moves the sessions
-   with the secret key and deletes the anonymous user.
+Supabase only redirects to addresses on its allow list. Locally
+that's `additional_redirect_urls` in `config.toml`, which covers
+`http://localhost:3000/**` and `http://127.0.0.1:3000/**`. For
+the hosted project, add the same addresses and the deployed site
+under Authentication, URL Configuration.
 
-The anonymous access token is only valid for about an hour,
-which is not a problem because the merge runs seconds after
-sign-in. This route would be the first place the app uses the
-secret key, so it must stay on the server and never appear in a
-file that is sent to the browser.
+## Moving a guest's work into an account
+
+When a guest signs in or creates an account, by any method,
+their sessions move into that account and the guest user is
+deleted. New and existing accounts go through the same steps.
+
+Ownership is stored in one place, `sessions.user_id`. Nodes,
+edges and preferences reach their owner through their session,
+so moving the sessions moves everything.
+
+The hard part is proving that the person owns both users.
+Row-level security only lets a user touch their own rows, so the
+browser cannot move rows between users. The server must also
+never trust a guest id that the browser simply sends, or anyone
+could claim someone else's sessions. So the merge runs on the
+server (`packages/frontend/lib/guest-merge.js`):
+
+1. Before signing in, the browser refreshes the guest's session
+   and calls `POST /api/auth/merge/start`. The server checks the
+   cookie belongs to a guest and copies the guest's access token
+   into an httpOnly cookie, `pf_merge_from`, which lasts an
+   hour, the same as the token.
+2. The person signs in or creates an account. The session cookie
+   now holds the account.
+3. The merge is finished by `POST /api/auth/merge/finish`
+   (email), or by the callback route (Google, and email links
+   when confirmation is on). The server asks Supabase to verify
+   the saved token. That only succeeds for a real, unexpired
+   guest, so a hand-edited cookie gets nowhere. It then moves
+   the guest's sessions to the account and deletes the guest.
+
+The refresh happens in the browser on purpose. Supabase rotates
+refresh tokens, so if the server refreshed instead, the browser
+would be left holding a revoked token. If sign-in then failed,
+the browser's next refresh would end the guest's session and
+lose their work.
+
+The sessions move before the guest is deleted. Deleting first
+would remove the sessions through `on delete cascade`. If the
+delete fails, an empty guest user is left behind, which is
+harmless.
+
+If the merge fails, the page shows a notice
+(`packages/frontend/app/merge-notice.js`) with **Try again** and
+**Dismiss**. The server keeps `pf_merge_from` until the sessions
+have moved, so a retry can finish the job. It's only cleared
+early when Supabase rejects the token, for example once it has
+expired.
+
+### The secret key
+
+The merge is the only code that uses the Supabase secret key,
+which skips row-level security. It's read from
+`SUPABASE_SECRET_KEY` in `packages/frontend/.env.local`, never
+from a `NEXT_PUBLIC_` variable, and only
+`packages/frontend/lib/supabase-admin.js` creates a client with
+it. That file imports `server-only`, so a browser file that
+imports it fails the build. Everything else, including the data
+access layer, still acts as the signed-in user.
 
 ## Still open
 
-Anonymous users who never upgrade and lose their cookie, by
-clearing browser data or switching devices, cannot get their
-sessions back. Those users will accumulate in `auth.users`, and
-a scheduled job could delete old anonymous users later; the
-`on delete cascade` on `sessions.user_id` removes their sessions
-and everything inside them at the same time.
+Guests who never sign in and lose their cookie, by clearing
+browser data or switching devices, cannot get their sessions
+back. Those users accumulate in `auth.users`. A scheduled job
+could delete old anonymous users later, and the
+`on delete cascade` on `sessions.user_id` would remove their
+sessions and everything inside them at the same time.
