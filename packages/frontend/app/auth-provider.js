@@ -22,6 +22,15 @@ const AuthContext = createContext({
   signOut: async () => {}
 });
 
+async function postJson(path) {
+  const response = await fetch(path, { method: "POST" });
+  if (response.ok) {
+    return response.status === 204 ? null : response.json();
+  }
+  const body = await response.json().catch(() => ({}));
+  throw new Error(body.error ?? `Request to ${path} failed.`);
+}
+
 function callbackUrl(next) {
   const url = new URL("/auth/callback", window.location.origin);
   if (next) url.searchParams.set("next", next);
@@ -53,24 +62,35 @@ export function AuthProvider({ children }) {
     if (error) throw error;
   }, [supabase]);
 
+  const isGuest = Boolean(user?.is_anonymous);
+
+  const startMerge = useCallback(async () => {
+    const { error } = await supabase.auth.refreshSession();
+    if (error) throw error;
+    await postJson("/api/auth/merge/start");
+  }, [supabase]);
+
   const signInWithEmail = useCallback(
     async (email, password) => {
+      if (isGuest) await startMerge();
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
       if (error) throw error;
+      if (isGuest) await postJson("/api/auth/merge/finish");
     },
-    [supabase]
+    [supabase, isGuest, startMerge]
   );
 
   const signInWithGoogle = useCallback(async () => {
+    if (isGuest) await startMerge();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: callbackUrl() }
     });
     if (error) throw error;
-  }, [supabase]);
+  }, [supabase, isGuest, startMerge]);
 
   const linkGoogleToGuest = useCallback(async () => {
     const { error } = await supabase.auth.linkIdentity({
@@ -99,6 +119,11 @@ export function AuthProvider({ children }) {
         { email },
         { emailRedirectTo: callbackUrl("/set-password") }
       );
+      if (error?.code === "email_exists") {
+        throw new Error(
+          'That email already has an account. Choose "I already have an account" to sign in and bring your guest work with you.'
+        );
+      }
       if (error) throw error;
     },
     [supabase]

@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "../../../lib/supabase-server";
+import { finishGuestMerge } from "../../../lib/guest-merge";
+
+const FRIENDLY_ERRORS = {
+  identity_already_exists:
+    "That Google account already has a Pathfinders account. Choose \"I already have an account\" to sign in and bring your guest work with you."
+};
 
 function safeNext(next) {
   if (next && next.startsWith("/") && !next.startsWith("//")) {
@@ -16,7 +22,9 @@ export async function GET(request) {
   const next = safeNext(searchParams.get("next"));
 
   const providerError =
-    searchParams.get("error_description") ?? searchParams.get("error");
+    FRIENDLY_ERRORS[searchParams.get("error_code")] ??
+    searchParams.get("error_description") ??
+    searchParams.get("error");
 
   const supabase = await createClient();
   let error = new Error("Missing code or token in the link.");
@@ -30,6 +38,14 @@ export async function GET(request) {
       type,
       token_hash: tokenHash
     }));
+  }
+
+  if (!error) {
+    try {
+      await finishGuestMerge();
+    } catch (err) {
+      error = err;
+    }
   }
 
   if (error) {
