@@ -5,17 +5,21 @@ import { useAuth } from "./auth-provider";
 import { EmailForm } from "./email-form";
 
 export function AuthChoice() {
-  const { continueAsGuest, signInWithEmail, signUpWithEmail } =
-    useAuth();
+  const {
+    continueAsGuest,
+    signInWithEmail,
+    signInWithGoogle,
+    signUpWithEmail
+  } = useAuth();
   const [mode, setMode] = useState("choice");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
-  async function handleGuest() {
+  async function run(action) {
     setBusy(true);
     setError(null);
     try {
-      await continueAsGuest();
+      await action();
     } catch (err) {
       setError(err.message);
       setBusy(false);
@@ -57,13 +61,24 @@ export function AuthChoice() {
   return (
     <section data-testid="auth-choice">
       <h2>Get started</h2>
+      <button
+        type="button"
+        onClick={() => run(signInWithGoogle)}
+        disabled={busy}
+      >
+        Continue with Google
+      </button>
       <button type="button" onClick={() => setMode("sign-in")}>
         Sign in with email
       </button>
       <button type="button" onClick={() => setMode("sign-up")}>
         Create an account
       </button>
-      <button type="button" onClick={handleGuest} disabled={busy}>
+      <button
+        type="button"
+        onClick={() => run(continueAsGuest)}
+        disabled={busy}
+      >
         Continue as guest
       </button>
       {error && <p role="alert">{error}</p>}

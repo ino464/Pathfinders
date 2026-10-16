@@ -14,6 +14,8 @@ const AuthContext = createContext({
   loading: true,
   continueAsGuest: async () => {},
   signInWithEmail: async () => {},
+  signInWithGoogle: async () => {},
+  linkGoogleToGuest: async () => {},
   signUpWithEmail: async () => {},
   addEmailToGuest: async () => {},
   setPassword: async () => {},
@@ -62,6 +64,22 @@ export function AuthProvider({ children }) {
     [supabase]
   );
 
+  const signInWithGoogle = useCallback(async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: callbackUrl() }
+    });
+    if (error) throw error;
+  }, [supabase]);
+
+  const linkGoogleToGuest = useCallback(async () => {
+    const { error } = await supabase.auth.linkIdentity({
+      provider: "google",
+      options: { redirectTo: callbackUrl() }
+    });
+    if (error) throw error;
+  }, [supabase]);
+
   const signUpWithEmail = useCallback(
     async (email, password) => {
       const { data, error } = await supabase.auth.signUp({
@@ -106,6 +124,8 @@ export function AuthProvider({ children }) {
         loading,
         continueAsGuest,
         signInWithEmail,
+        signInWithGoogle,
+        linkGoogleToGuest,
         signUpWithEmail,
         addEmailToGuest,
         setPassword,

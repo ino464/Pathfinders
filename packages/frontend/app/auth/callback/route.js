@@ -15,10 +15,15 @@ export async function GET(request) {
   const type = searchParams.get("type");
   const next = safeNext(searchParams.get("next"));
 
+  const providerError =
+    searchParams.get("error_description") ?? searchParams.get("error");
+
   const supabase = await createClient();
   let error = new Error("Missing code or token in the link.");
 
-  if (code) {
+  if (providerError) {
+    error = new Error(providerError);
+  } else if (code) {
     ({ error } = await supabase.auth.exchangeCodeForSession(code));
   } else if (tokenHash && type) {
     ({ error } = await supabase.auth.verifyOtp({

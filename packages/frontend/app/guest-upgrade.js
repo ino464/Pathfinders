@@ -5,14 +5,38 @@ import { useAuth } from "./auth-provider";
 import { EmailForm } from "./email-form";
 
 export function GuestUpgrade() {
-  const { addEmailToGuest } = useAuth();
+  const { addEmailToGuest, linkGoogleToGuest } = useAuth();
   const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function handleGoogle() {
+    setBusy(true);
+    setError(null);
+    try {
+      await linkGoogleToGuest();
+    } catch (err) {
+      setError(err.message);
+      setBusy(false);
+    }
+  }
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)}>
-        Create an account to save your work
-      </button>
+      <div>
+        <p>Create an account to save your work.</p>
+        <button type="button" onClick={handleGoogle} disabled={busy}>
+          Save with Google
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          disabled={busy}
+        >
+          Save with email
+        </button>
+        {error && <p role="alert">{error}</p>}
+      </div>
     );
   }
 
