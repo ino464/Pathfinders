@@ -9,10 +9,16 @@ export function assembleContext(
   // map and look up each node by its id instead of looping through list every time
   const nodeId = new Map(nodes.map((n) => [n.id, n]));
 
+  // the target has to exist and not be deleted
+  const target = nodeId.get(targetNodeId);
+  if (!target) {throw new Error(`Error: Node was not found`);}
+  if (target.deleted_at) {throw new Error(`Error: Node was deleted`);}
+
   // For each node, remember who its parents/children are
   const childrenOf = new Map();
   const parentsOf = new Map();
 
+  // build the parent and child lookups from the edge list
   for (const e of edges) {
     // first time we see this child, give it an empty edge list
     if (!parentsOf.has(e.child_node_id)) {
@@ -29,9 +35,8 @@ export function assembleContext(
   }
 
   // collect every node before the current node (all ancestors)
-  // the set only keeps one copy of each id, so a node reached by two
-  // routes (like the root in a diamond) is only counted once
-  // Goal : sets up a list of all nodes needed for context
+  // the set only keeps one copy of each id (no duplicates)
+  // Goal -> sets up a list of all nodes needed for context
   const ancestors = new Set();
 
   // ids we still need to look at
@@ -44,8 +49,11 @@ export function assembleContext(
 
     // if already collected, skip
     if (ancestors.has(id)) continue;
-
-    // remember id!
+    
+    // if node was deleted, skip
+    const node = nodeId.get(id);
+    if (!node || node.deleted_at) continue;
+    
     ancestors.add(id);
 
     // add all of its parents to the list
@@ -53,8 +61,17 @@ export function assembleContext(
     toVisit.push(...(parentsOf.get(id) ?? []));
   }
 
-  // the root is the node with no parent (or their id)
-  const root = nodes.find((n) => !parentsOf.has(n.id));
+  // there has to be exactly one root (a node with no parent)
+  const roots = nodes.filter((n) => !parentsOf.has(n.id));
+  if (roots.length !== 1) {
+    throw new Error(`Error: expected 1 root, found multiple`);
+  }
+
+  const root = roots[0];
+  // if the root wasn't reached, a deleted node cut off the path to it
+  if (!ancestors.has(root.id)) {
+    throw new Error(`Error: no direct path to root`);
+  }
 
   // decides which of two nodes goes first:
   // the older one, or the lower id if created same time
@@ -103,6 +120,11 @@ export function assembleContext(
       }
     }
   }
+  // if some ancestors never became ready, the graph has a cycle
+  if (ordered.length !== ancestors.size) {
+    throw new Error("Error: graph has a cycle");
+  }
+
 
   //turn each node into a message (content)
   const messages = ordered.map((node) => ({
