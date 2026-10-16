@@ -14,7 +14,7 @@ export function SetPasswordForm() {
     return (
       <p>
         This reset link has expired or was opened in a different
-        browser. <Link href="/">Request a new one</Link>.
+        browser. <Link href="/login">Request a new one</Link>.
       </p>
     );
   }
