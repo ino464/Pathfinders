@@ -83,6 +83,13 @@ question in `docs/UML.md`.
 `addEdge` refuses an edge whose child is already an ancestor of
 its parent, so the graph never contains a loop.
 
+### Session graph layout
+
+Node positions are currently calculated in the frontend when a
+graph loads. If users later need to move nodes and keep their
+layout, add `position_x` and `position_y` fields to the
+database.
+
 ## Who enforces access
 
 Row-level security is the access control. The policies from #29
