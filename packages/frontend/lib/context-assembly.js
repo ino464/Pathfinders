@@ -11,8 +11,12 @@ export function assembleContext(
 
   // the target has to exist and not be deleted
   const target = nodeId.get(targetNodeId);
-  if (!target) {throw new Error(`Error: Node was not found`);}
-  if (target.deleted_at) {throw new Error(`Error: Node was deleted`);}
+  if (!target) {
+    throw new Error(`Error: Node was not found`);
+  }
+  if (target.deleted_at) {
+    throw new Error(`Error: Node was deleted`);
+  }
 
   // For each node, remember who its parents/children are
   const childrenOf = new Map();
@@ -49,11 +53,11 @@ export function assembleContext(
 
     // if already collected, skip
     if (ancestors.has(id)) continue;
-    
+
     // if node was deleted, skip
     const node = nodeId.get(id);
     if (!node || node.deleted_at) continue;
-    
+
     ancestors.add(id);
 
     // add all of its parents to the list
@@ -124,7 +128,6 @@ export function assembleContext(
   if (ordered.length !== ancestors.size) {
     throw new Error("Error: graph has a cycle");
   }
-
 
   //turn each node into a message (content)
   const messages = ordered.map((node) => ({
