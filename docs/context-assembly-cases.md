@@ -9,28 +9,27 @@ The function does not exist yet. This file describes agreed
 behaviour only. Where nothing is agreed, the file has an open
 question and no case.
 
-**Review status:** Ethan read this file on 2026-10-14. Answers are
-under each open question. Decisions 1a–5 accepted.
-
+**Review status:** Ethan read this file on 2026-10-14. Answers
+are under each open question. Decisions 1a–5 accepted.
 
 ## Decisions
 
 Each case below follows from these decisions. Tyler made each
 decision.
 
-| #   | Decision             | Choice                                                                                                                                      | Decided by | Status                      |
-| --- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------- |
-| 1a  | Inputs               | `(nodes, edges, targetNodeId, preferences)`. No `rootPrompt` argument.                                                                      | Tyler      | Accepted (Ethan)            |
-| 1b  | Return value         | An array of `{ role, content }` messages.                                                                                                   | Tyler      | Accepted (Ethan)            |
-| 1c  | Roles                | The root is `user`. Each other node is `assistant`. One message per node.                                                                   | Tyler      | Accepted (Ethan)            |
-| 2   | Instruction text     | Context assembly adds none. Issue #32 adds its own.                                                                                         | Tyler      | Accepted (Ethan)            |
-| 3   | Depth                | Always the full path, root first. No truncation.                                                                                            | Tyler      | Read (Ethan)                |
-| 4   | Merged node          | All ancestors, each one time, parents before children. Tie-break: `created_at` ascending, then `id`.                                        | Tyler      | Accepted (Ethan)            |
-| 5   | Preferences          | One `system` message at the front. One preference per line, in `created_at` order. No `system` message when there are no preferences.       | Tyler      | Accepted (Ethan)            |
-| 6   | Deleted ancestors    | A deleted node is a cut. Exclude it and all nodes reachable only through it. Throw if the target is deleted or no path to the root remains. | Tyler      | Read (Ethan), Cole confirm  |
-| 7   | Token budget         | None in version one. The function does not truncate and does not throw for size.                                                            | Tyler      | Read (Ethan)                |
-| 8   | Rejected ancestors   | The function ignores `status`. A rejected ancestor stays in the context.                                                                    | Tyler      | Read (Ethan), Cole confirm  |
-| 9   | Where the cases live | This file holds inputs and expected outputs. `packages/frontend/test/context-assembly.test.js` holds one `test.todo` per case.              | Tyler      | Final                       |
+| #   | Decision             | Choice                                                                                                                                      | Decided by | Status                     |
+| --- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | -------------------------- |
+| 1a  | Inputs               | `(nodes, edges, targetNodeId, preferences)`. No `rootPrompt` argument.                                                                      | Tyler      | Accepted (Ethan)           |
+| 1b  | Return value         | An array of `{ role, content }` messages.                                                                                                   | Tyler      | Accepted (Ethan)           |
+| 1c  | Roles                | The root is `user`. Each other node is `assistant`. One message per node.                                                                   | Tyler      | Accepted (Ethan)           |
+| 2   | Instruction text     | Context assembly adds none. Issue #32 adds its own.                                                                                         | Tyler      | Accepted (Ethan)           |
+| 3   | Depth                | Always the full path, root first. No truncation.                                                                                            | Tyler      | Read (Ethan)               |
+| 4   | Merged node          | All ancestors, each one time, parents before children. Tie-break: `created_at` ascending, then `id`.                                        | Tyler      | Accepted (Ethan)           |
+| 5   | Preferences          | One `system` message at the front. One preference per line, in `created_at` order. No `system` message when there are no preferences.       | Tyler      | Accepted (Ethan)           |
+| 6   | Deleted ancestors    | A deleted node is a cut. Exclude it and all nodes reachable only through it. Throw if the target is deleted or no path to the root remains. | Tyler      | Read (Ethan), Cole confirm |
+| 7   | Token budget         | None in version one. The function does not truncate and does not throw for size.                                                            | Tyler      | Read (Ethan)               |
+| 8   | Rejected ancestors   | The function ignores `status`. A rejected ancestor stays in the context.                                                                    | Tyler      | Read (Ethan), Cole confirm |
+| 9   | Where the cases live | This file holds inputs and expected outputs. `packages/frontend/test/context-assembly.test.js` holds one `test.todo` per case.              | Tyler      | Final                      |
 
 Decision 1a differs from the sketch in issue #31, which lists a
 `rootPrompt` argument. `docs/UML.md` makes the root an ordinary
@@ -352,23 +351,25 @@ person before issue #31 can close.
 2. **Ethan.** What does the function throw in cases 5a and 5b?
    Issue #32 must catch it.
 
-   **Answer (Ethan):** A plain `Error` with a message should suffice, for
-   example `Cannot assemble context: target node X is deleted`.
+   **Answer (Ethan):** A plain `Error` with a message should
+   suffice, for example
+   `Cannot assemble context: target node X is deleted`.
 
 3. **Ethan and Cole.** The fixtures use the database column
    names. `docs/UML.md` uses names such as `createdAt`. Issue
    #30 has not defined the shape that `getSessionGraph` returns.
    Which names does the function receive?
-   
-   **Answer (Ethan):** The function expects snake_case field names, the
-   same as the database columns: `created_at`, `deleted_at`,
-   `parent_node_id`, `child_node_id`. `getSessionGraph` (#30) should
-   pass the rows through as stored. If the rest of the app wants
-   camelCase, #30 converts it after calling this function.
 
-   **Cole:** please confirm that #30 returns raw rows. If it doesn't,
-   tell me the field names it returns, and I'll change the function and
-   its tests to match.
+   **Answer (Ethan):** The function expects snake_case field
+   names, the same as the database columns: `created_at`,
+   `deleted_at`, `parent_node_id`, `child_node_id`.
+   `getSessionGraph` (#30) should pass the rows through as
+   stored. If the rest of the app wants camelCase, #30 converts
+   it after calling this function.
+
+   **Cole:** please confirm that #30 returns raw rows. If it
+   doesn't, tell me the field names it returns, and I'll change
+   the function and its tests to match.
 
 4. **Ethan.** What occurs when `targetNodeId` is not in `nodes`,
    when `edges` contains a cycle, or when more than one node has
@@ -379,7 +380,8 @@ person before issue #31 can close.
 5. **Ethan.** What is the order of two preferences with the same
    `created_at`?
 
-   **Answer (Ethan):** `id` ascending, the same tie-break as nodes.
+   **Answer (Ethan):** `id` ascending, the same tie-break as
+   nodes.
 
 6. **Cole.** Cases 5c and 5d need a merged node to stay alive
    when one parent is deleted. That is the open `deleteSubtree`

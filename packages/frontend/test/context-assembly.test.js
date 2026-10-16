@@ -12,28 +12,29 @@ const node = (id, content, time) => ({
   content,
   status: "pending",
   created_at: `2026-01-01T00:00:0${time}Z`,
-  deleted_at: null,
+  deleted_at: null
 });
 
 //makes an edge object, arrow from parent to child
 const edge = (parent, child) => ({
   parent_node_id: parent,
-  child_node_id: child,
+  child_node_id: child
 });
 
 // makes a preference object, higher time = created later
 const pref = (id, content, time) => ({
   id,
   content,
-  created_at: `2026-01-01T00:00:0${time}Z`,
+  created_at: `2026-01-01T00:00:0${time}Z`
 });
 
 // copies a node and marks it deleted
-const deleted = (n) => ({ ...n, deleted_at: "2026-01-01T00:00:09Z" });
-
+const deleted = (n) => ({
+  ...n,
+  deleted_at: "2026-01-01T00:00:09Z"
+});
 
 describe("context assembly", () => {
-
   test("case 1: root target gives one user message", () => {
     // setup: set up graph with one root
     const nodes = [node("R", "Root prompt", 1)];
@@ -42,9 +43,11 @@ describe("context assembly", () => {
     const result = assembleContext(nodes, [], "R");
 
     // check: the root becomes a user message, the content contains the prompt entered
-    expect(result).toEqual([{ role: "user", content: "Root prompt" }]);
+    expect(result).toEqual([
+      { role: "user", content: "Root prompt" }
+    ]);
   });
-  
+
   test("case 2: five levels deep gives the full path", () => {
     // setup: R → A → B → C → D → E, listed newest first on purpose.
     const nodes = [
@@ -53,17 +56,17 @@ describe("context assembly", () => {
       node("C", "Idea C", 4),
       node("B", "Idea B", 3),
       node("A", "Idea A", 2),
-      node("R", "Root prompt", 1),
+      node("R", "Root prompt", 1)
     ];
     const edges = [
       edge("R", "A"),
       edge("A", "B"),
       edge("B", "C"),
       edge("C", "D"),
-      edge("D", "E"),
+      edge("D", "E")
     ];
 
-    // run: build node list 
+    // run: build node list
     const result = assembleContext(nodes, edges, "E");
 
     // check: Root first as "user", everything else "assistant", are they all connected?
@@ -73,7 +76,7 @@ describe("context assembly", () => {
       { role: "assistant", content: "Idea B" },
       { role: "assistant", content: "Idea C" },
       { role: "assistant", content: "Idea D" },
-      { role: "assistant", content: "Idea E" },
+      { role: "assistant", content: "Idea E" }
     ]);
   });
 
@@ -84,14 +87,14 @@ describe("context assembly", () => {
       node("M", "Merged idea", 4),
       node("B", "Idea B", 3),
       node("A", "Idea A", 2),
-      node("R", "Root prompt", 1),
+      node("R", "Root prompt", 1)
     ];
     //remember (parent, child)
     const edges = [
       edge("R", "A"),
       edge("R", "B"),
       edge("A", "M"),
-      edge("B", "M"),
+      edge("B", "M")
     ];
 
     // run: assemble list
@@ -102,7 +105,7 @@ describe("context assembly", () => {
       { role: "user", content: "Root prompt" },
       { role: "assistant", content: "Idea A" },
       { role: "assistant", content: "Idea B" },
-      { role: "assistant", content: "Merged idea" },
+      { role: "assistant", content: "Merged idea" }
     ]);
   });
 
@@ -113,15 +116,15 @@ describe("context assembly", () => {
       node("M", "Merged idea", 4),
       node("B", "Idea B", 2),
       node("A", "Idea A", 2),
-      node("R", "Root prompt", 1),
+      node("R", "Root prompt", 1)
     ];
     const edges = [
       edge("R", "A"),
       edge("R", "B"),
       edge("A", "M"),
-      edge("B", "M"),
+      edge("B", "M")
     ];
-    
+
     // run: assemble nodes
     const result = assembleContext(nodes, edges, "M");
 
@@ -130,7 +133,7 @@ describe("context assembly", () => {
       { role: "user", content: "Root prompt" },
       { role: "assistant", content: "Idea A" },
       { role: "assistant", content: "Idea B" },
-      { role: "assistant", content: "Merged idea" },
+      { role: "assistant", content: "Merged idea" }
     ]);
   });
 
@@ -141,14 +144,14 @@ describe("context assembly", () => {
       node("M", "Merged idea", 4),
       node("B", "Idea B", 3),
       node("A", "Idea A", 2),
-      node("R", "Root prompt", 1),
+      node("R", "Root prompt", 1)
     ];
     const edges = [
       edge("R", "A"),
       edge("R", "B"),
       edge("A", "M"),
       edge("B", "M"),
-      edge("M", "N"),
+      edge("M", "N")
     ];
 
     // run: assemble nodes
@@ -160,7 +163,7 @@ describe("context assembly", () => {
       { role: "assistant", content: "Idea A" },
       { role: "assistant", content: "Idea B" },
       { role: "assistant", content: "Merged idea" },
-      { role: "assistant", content: "Idea N" },
+      { role: "assistant", content: "Idea N" }
     ]);
   });
 
@@ -171,14 +174,14 @@ describe("context assembly", () => {
       node("C", "Idea C", 4),
       node("B", "Idea B", 3),
       node("A", "Idea A", 2),
-      node("R", "Root prompt", 1),
+      node("R", "Root prompt", 1)
     ];
     const edges = [
       edge("R", "A"),
       edge("A", "C"),
       edge("C", "M"),
       edge("R", "B"),
-      edge("B", "M"),
+      edge("B", "M")
     ];
 
     // run: assemble nodes
@@ -191,7 +194,7 @@ describe("context assembly", () => {
       { role: "assistant", content: "Idea A" },
       { role: "assistant", content: "Idea B" },
       { role: "assistant", content: "Idea C" },
-      { role: "assistant", content: "Merged idea" },
+      { role: "assistant", content: "Merged idea" }
     ]);
   });
 
@@ -200,7 +203,7 @@ describe("context assembly", () => {
     const nodes = [node("R", "Root prompt", 1)];
     const preferences = [
       pref("P2", "No ideas that need a car", 3),
-      pref("P1", "Keep every suggestion low budget", 2),
+      pref("P1", "Keep every suggestion low budget", 2)
     ];
 
     // run: preferences are the 4th argument
@@ -210,38 +213,51 @@ describe("context assembly", () => {
     expect(result).toEqual([
       {
         role: "system",
-        content: "Keep every suggestion low budget\nNo ideas that need a car",
+        content:
+          "Keep every suggestion low budget\nNo ideas that need a car"
       },
-      { role: "user", content: "Root prompt" },
+      { role: "user", content: "Root prompt" }
     ]);
   });
 
   test("case 4b: preferences come before a deeper path", () => {
     // setup: R → A with the same two preferences.
-    const nodes = [node("A", "Idea A", 2), node("R", "Root prompt", 1)];
+    const nodes = [
+      node("A", "Idea A", 2),
+      node("R", "Root prompt", 1)
+    ];
     const edges = [edge("R", "A")];
     const preferences = [
       pref("P2", "No ideas that need a car", 3),
-      pref("P1", "Keep every suggestion low budget", 2),
+      pref("P1", "Keep every suggestion low budget", 2)
     ];
 
     // run: assemble with target A
-    const result = assembleContext(nodes, edges, "A", preferences);
+    const result = assembleContext(
+      nodes,
+      edges,
+      "A",
+      preferences
+    );
 
     // check: system message (prefrences) is still first, then the path
     expect(result).toEqual([
       {
         role: "system",
-        content: "Keep every suggestion low budget\nNo ideas that need a car",
+        content:
+          "Keep every suggestion low budget\nNo ideas that need a car"
       },
       { role: "user", content: "Root prompt" },
-      { role: "assistant", content: "Idea A" },
+      { role: "assistant", content: "Idea A" }
     ]);
   });
 
   test("case 4c: no preferences gives no system message", () => {
     // setup: R → A, empty preferences list.
-    const nodes = [node("A", "Idea A", 2), node("R", "Root prompt", 1)];
+    const nodes = [
+      node("A", "Idea A", 2),
+      node("R", "Root prompt", 1)
+    ];
     const edges = [edge("R", "A")];
 
     // run: assemble with an empty list
@@ -250,7 +266,7 @@ describe("context assembly", () => {
     // check: no system message at all
     expect(result).toEqual([
       { role: "user", content: "Root prompt" },
-      { role: "assistant", content: "Idea A" },
+      { role: "assistant", content: "Idea A" }
     ]);
   });
 
@@ -258,7 +274,7 @@ describe("context assembly", () => {
     // setup: R → A, and A (the target) is deleted.
     const nodes = [
       deleted(node("A", "Idea A", 2)),
-      node("R", "Root prompt", 1),
+      node("R", "Root prompt", 1)
     ];
     const edges = [edge("R", "A")];
 
@@ -271,7 +287,7 @@ describe("context assembly", () => {
     const nodes = [
       node("B", "Idea B", 3),
       deleted(node("A", "Idea A", 2)),
-      node("R", "Root prompt", 1),
+      node("R", "Root prompt", 1)
     ];
     const edges = [edge("R", "A"), edge("A", "B")];
 
@@ -285,13 +301,13 @@ describe("context assembly", () => {
       node("M", "Merged idea", 4),
       deleted(node("B", "Idea B", 3)),
       node("A", "Idea A", 2),
-      node("R", "Root prompt", 1),
+      node("R", "Root prompt", 1)
     ];
     const edges = [
       edge("R", "A"),
       edge("R", "B"),
       edge("A", "M"),
-      edge("B", "M"),
+      edge("B", "M")
     ];
 
     // run: assemble nodes
@@ -301,25 +317,25 @@ describe("context assembly", () => {
     expect(result).toEqual([
       { role: "user", content: "Root prompt" },
       { role: "assistant", content: "Idea A" },
-      { role: "assistant", content: "Merged idea" },
+      { role: "assistant", content: "Merged idea" }
     ]);
   });
 
-    test("case 5d: node above a deleted node is excluded", () => {
+  test("case 5d: node above a deleted node is excluded", () => {
     // setup: R → A → M and R → X → B → M, and B is deleted. X is alive.
     const nodes = [
       node("M", "Merged idea", 6),
       deleted(node("B", "Idea B", 5)),
       node("X", "Idea X", 4),
       node("A", "Idea A", 2),
-      node("R", "Root prompt", 1),
+      node("R", "Root prompt", 1)
     ];
     const edges = [
       edge("R", "A"),
       edge("A", "M"),
       edge("R", "X"),
       edge("X", "B"),
-      edge("B", "M"),
+      edge("B", "M")
     ];
 
     // run: assemble nodes
@@ -330,7 +346,7 @@ describe("context assembly", () => {
     expect(result).toEqual([
       { role: "user", content: "Root prompt" },
       { role: "assistant", content: "Idea A" },
-      { role: "assistant", content: "Merged idea" },
+      { role: "assistant", content: "Merged idea" }
     ]);
   });
 
@@ -343,14 +359,14 @@ describe("context assembly", () => {
       node("C", long("C"), 4),
       node("B", long("B"), 3),
       node("A", long("A"), 2),
-      node("R", long("R"), 1),
+      node("R", long("R"), 1)
     ];
     const edges = [
       edge("R", "A"),
       edge("A", "B"),
       edge("B", "C"),
       edge("C", "D"),
-      edge("D", "E"),
+      edge("D", "E")
     ];
 
     // run: assemble nodes
@@ -363,7 +379,7 @@ describe("context assembly", () => {
       { role: "assistant", content: long("B") },
       { role: "assistant", content: long("C") },
       { role: "assistant", content: long("D") },
-      { role: "assistant", content: long("E") },
+      { role: "assistant", content: long("E") }
     ]);
   });
 
@@ -372,7 +388,7 @@ describe("context assembly", () => {
     const nodes = [
       node("B", "Idea B", 3),
       { ...node("A", "Idea A", 2), status: "rejected" },
-      node("R", "Root prompt", 1),
+      node("R", "Root prompt", 1)
     ];
     const edges = [edge("R", "A"), edge("A", "B")];
 
@@ -383,8 +399,7 @@ describe("context assembly", () => {
     expect(result).toEqual([
       { role: "user", content: "Root prompt" },
       { role: "assistant", content: "Idea A" },
-      { role: "assistant", content: "Idea B" },
+      { role: "assistant", content: "Idea B" }
     ]);
   });
-
 });
