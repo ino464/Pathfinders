@@ -13,16 +13,18 @@ export function SetPasswordForm() {
   if (!user || user.is_anonymous) {
     return (
       <p>
-        Confirm your email first. <Link href="/">Back to Pathfinders</Link>
+        This reset link has expired or was opened in a different
+        browser. <Link href="/">Request a new one</Link>.
       </p>
     );
   }
 
   return (
     <EmailForm
-      title={`Choose a password for ${user.email}`}
+      title={`Choose a new password for ${user.email}`}
       submitLabel="Save password"
       askEmail={false}
+      newPassword
       onSubmit={async ({ password }) => {
         await setPassword(password);
         router.push("/");

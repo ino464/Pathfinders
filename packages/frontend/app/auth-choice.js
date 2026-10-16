@@ -14,7 +14,8 @@ export function AuthChoice({
     continueAsGuest,
     signInWithEmail,
     signInWithGoogle,
-    signUpWithEmail
+    signUpWithEmail,
+    sendPasswordReset
   } = useAuth();
   const [mode, setMode] = useState("choice");
   const [busy, setBusy] = useState(false);
@@ -34,13 +35,33 @@ export function AuthChoice({
 
   if (mode === "sign-in") {
     return (
+      <>
+        <EmailForm
+          title="Sign in"
+          submitLabel="Sign in"
+          onSubmit={({ email, password }) =>
+            signInWithEmail(email, password)
+          }
+          onCancel={() => setMode("choice")}
+        />
+        <button type="button" onClick={() => setMode("forgot")}>
+          Forgot password?
+        </button>
+      </>
+    );
+  }
+
+  if (mode === "forgot") {
+    return (
       <EmailForm
-        title="Sign in"
-        submitLabel="Sign in"
-        onSubmit={({ email, password }) =>
-          signInWithEmail(email, password)
-        }
-        onCancel={() => setMode("choice")}
+        title="Reset your password"
+        submitLabel="Send reset link"
+        askPassword={false}
+        onSubmit={async ({ email }) => {
+          await sendPasswordReset(email);
+          return `If ${email} has an account, a link to choose a new password is on its way.`;
+        }}
+        onCancel={() => setMode("sign-in")}
       />
     );
   }

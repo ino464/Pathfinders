@@ -17,6 +17,8 @@ const AuthContext = createContext({
   signInWithEmail: async () => {},
   signInWithGoogle: async () => {},
   signUpWithEmail: async () => {},
+  sendPasswordReset: async () => {},
+  setPassword: async () => {},
   retryMerge: async () => {},
   dismissMergeError: () => {},
   signOut: async () => {}
@@ -31,11 +33,10 @@ async function postJson(path) {
   throw new Error(body.error ?? `Request to ${path} failed.`);
 }
 
-function callbackUrl() {
-  return new URL(
-    "/auth/callback",
-    window.location.origin
-  ).toString();
+function callbackUrl(next) {
+  const url = new URL("/auth/callback", window.location.origin);
+  if (next) url.searchParams.set("next", next);
+  return url.toString();
 }
 
 function mergeErrorFromUrl() {
@@ -135,6 +136,28 @@ export function AuthProvider({ children }) {
     if (error) throw error;
   }, [supabase, isGuest, startMerge]);
 
+  const sendPasswordReset = useCallback(
+    async (email) => {
+      if (isGuest) await startMerge();
+      const { error } =
+        await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: callbackUrl("/set-password")
+        });
+      if (error) throw error;
+    },
+    [supabase, isGuest, startMerge]
+  );
+
+  const setPassword = useCallback(
+    async (password) => {
+      const { error } = await supabase.auth.updateUser({
+        password
+      });
+      if (error) throw error;
+    },
+    [supabase]
+  );
+
   const dismissMergeError = useCallback(
     () => setMergeError(null),
     []
@@ -155,6 +178,8 @@ export function AuthProvider({ children }) {
         signInWithEmail,
         signInWithGoogle,
         signUpWithEmail,
+        sendPasswordReset,
+        setPassword,
         retryMerge: finishMerge,
         dismissMergeError,
         signOut

@@ -49,6 +49,21 @@ button. They get "Save your work to an account" instead.
   person is signed in when they open it.
 - **Sign in with email** calls `signInWithPassword`.
 
+## Forgot password
+
+"Forgot password?" under the email sign-in form calls
+`resetPasswordForEmail`. Supabase emails a link that goes
+through `/auth/callback` to `/set-password`
+(`packages/frontend/app/set-password/`), where the person
+chooses a new password with `updateUser({ password })`. Locally
+the email can be read at http://127.0.0.1:54324.
+
+The link only works in the browser that asked for it, because
+`@supabase/ssr` keeps a PKCE code verifier in that browser's
+cookies. Opened anywhere else, the page says the link has
+expired and offers a new one. A guest who resets the password of
+an existing account gets the same merge as signing in.
+
 ## Google
 
 **Continue with Google** calls `signInWithOAuth`. The browser
