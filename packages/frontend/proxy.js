@@ -5,6 +5,17 @@ import {
   supabasePublishableKey
 } from "./lib/supabase-env";
 
+function redirectTarget(pathname, signedIn) {
+  if (
+    pathname.startsWith("/api/") ||
+    pathname.startsWith("/auth/")
+  ) {
+    return null;
+  }
+  if (pathname === "/login") return signedIn ? "/" : null;
+  return signedIn ? null : "/login";
+}
+
 export async function proxy(request) {
   let response = NextResponse.next({ request });
 
@@ -32,9 +43,20 @@ export async function proxy(request) {
     }
   );
 
-  await supabase.auth.getClaims();
+  const { data } = await supabase.auth.getClaims();
+  const target = redirectTarget(
+    request.nextUrl.pathname,
+    Boolean(data?.claims)
+  );
+  if (!target) return response;
 
-  return response;
+  const redirect = NextResponse.redirect(
+    new URL(target, request.url)
+  );
+  response.cookies
+    .getAll()
+    .forEach((cookie) => redirect.cookies.set(cookie));
+  return redirect;
 }
 
 export const config = {
