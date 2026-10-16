@@ -9,10 +9,10 @@ export function assembleContext(
   // map and look up each node by its id instead of looping through list every time
   const nodeId = new Map(nodes.map((n) => [n.id, n]));
 
-  // For each node, remember who its children are (the reverse of parentsOf).
+  // For each node, remember who its parents/children are
   const childrenOf = new Map();
-
   const parentsOf = new Map();
+
   for (const e of edges) {
     // first time we see this child, give it an empty edge list
     if (!parentsOf.has(e.child_node_id)) {
@@ -105,9 +105,23 @@ export function assembleContext(
   }
 
   //turn each node into a message (content)
-  return ordered.map((node) => ({
+  const messages = ordered.map((node) => ({
     // root node is the user, rest assistant
     role: node.id === root.id ? "user" : "assistant",
     content: node.content
   }));
+
+  // only add a preferences message if there is at least one preference
+  if (preferences.length > 0) {
+    // sort a copy (so original unchanged)
+    const sorted = [...preferences].sort(byTimeThenId);
+
+    // put all the preference texts into one string, one per line
+    const text = sorted.map((p) => p.content).join("\n");
+
+    // add it to the front so it comes before the nodes
+    messages.unshift({ role: "system", content: text });
+  }
+
+  return messages;
 }
