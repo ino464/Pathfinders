@@ -13,8 +13,18 @@ const AuthContext = createContext({
   user: null,
   loading: true,
   continueAsGuest: async () => {},
+  signInWithEmail: async () => {},
+  signUpWithEmail: async () => {},
+  addEmailToGuest: async () => {},
+  setPassword: async () => {},
   signOut: async () => {}
 });
+
+function callbackUrl(next) {
+  const url = new URL("/auth/callback", window.location.origin);
+  if (next) url.searchParams.set("next", next);
+  return url.toString();
+}
 
 export function AuthProvider({ children }) {
   const [supabase] = useState(() => createClient());
@@ -41,6 +51,49 @@ export function AuthProvider({ children }) {
     if (error) throw error;
   }, [supabase]);
 
+  const signInWithEmail = useCallback(
+    async (email, password) => {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      if (error) throw error;
+    },
+    [supabase]
+  );
+
+  const signUpWithEmail = useCallback(
+    async (email, password) => {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: callbackUrl() }
+      });
+      if (error) throw error;
+      return { needsConfirmation: !data.session };
+    },
+    [supabase]
+  );
+
+  const addEmailToGuest = useCallback(
+    async (email) => {
+      const { error } = await supabase.auth.updateUser(
+        { email },
+        { emailRedirectTo: callbackUrl("/set-password") }
+      );
+      if (error) throw error;
+    },
+    [supabase]
+  );
+
+  const setPassword = useCallback(
+    async (password) => {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+    },
+    [supabase]
+  );
+
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
@@ -48,7 +101,16 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, continueAsGuest, signOut }}
+      value={{
+        user,
+        loading,
+        continueAsGuest,
+        signInWithEmail,
+        signUpWithEmail,
+        addEmailToGuest,
+        setPassword,
+        signOut
+      }}
     >
       {children}
     </AuthContext.Provider>

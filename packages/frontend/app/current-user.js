@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "./auth-provider";
 import { AuthChoice } from "./auth-choice";
+import { GuestUpgrade } from "./guest-upgrade";
 
 export function CurrentUser() {
   const { user, loading, signOut } = useAuth();
@@ -22,10 +23,13 @@ export function CurrentUser() {
 
   if (user.is_anonymous) {
     return (
-      <p>
-        You are using Pathfinders as a guest (
-        <code data-testid="user-id">{user.id}</code>).
-      </p>
+      <div>
+        <p>
+          You are using Pathfinders as a guest (
+          <code data-testid="user-id">{user.id}</code>).
+        </p>
+        <GuestUpgrade />
+      </div>
     );
   }
 
