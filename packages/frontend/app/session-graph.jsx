@@ -13,75 +13,31 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-// This fixture deliberately keeps the canvas independent from getSessionGraph
-// until the session data layer is ready. Replace SESSION_GRAPH_FIXTURE with its
-// result once that work lands.
+//hardcoded temporary graph info
 const SESSION_GRAPH_FIXTURE = {
   nodes: [
-    {
-      id: "question",
-      label: "How might we improve student productivity?",
-      detail: "root",
-      level: 0
-    },
-    {
-      id: "time-tools",
-      label: "Better time management tools",
-      detail: "selected",
-      level: 1,
-      selected: true
-    },
-    {
-      id: "distractions",
-      label: "Reduce distractions & context switching",
-      detail: "0 children",
-      level: 1
-    },
-    {
-      id: "feedback",
-      label: "Personalised feedback loops",
-      detail: "1 child",
-      level: 1
-    },
-    {
-      id: "priorities",
-      label: "Weekly priority planner",
-      detail: "time tools",
-      level: 2
-    },
-    {
-      id: "focus-mode",
-      label: "Focus mode reminders",
-      detail: "time tools",
-      level: 2
-    },
-    {
-      id: "progress",
-      label: "Progress reflection prompts",
-      detail: "feedback",
-      level: 2
-    },
-    {
-      id: "check-in",
-      label: "Weekly accountability check-in",
-      detail: "feedback",
-      level: 2
-    }
+    { id: "question", label: "How can I make my study plan sustainable?", level: 0 },
+    { id: "time", label: "Protect focused study time", level: 1 },
+    { id: "energy", label: "Plan around energy levels", level: 1 },
+    { id: "support", label: "Build in accountability", level: 1 },
+    { id: "calendar", label: "Block two 90-minute sessions", level: 2 },
+    { id: "tasks", label: "Break assignments into next actions", level: 2 },
+    { id: "morning", label: "Use mornings for harder work", level: 2 },
+    { id: "check-in", label: "Schedule a weekly check-in", level: 2 }
   ],
   edges: [
-    ["question", "time-tools"],
-    ["question", "distractions"],
-    ["question", "feedback"],
-    ["time-tools", "priorities"],
-    ["time-tools", "focus-mode"],
-    ["feedback", "progress"],
-    ["feedback", "check-in"]
+    ["question", "time"],
+    ["question", "energy"],
+    ["question", "support"],
+    ["time", "calendar"],
+    ["time", "tasks"],
+    ["energy", "morning"],
+    ["support", "check-in"]
   ]
 };
 
-// Layout decision: positions are computed when this component loads. We do not
-// persist x/y coordinates yet; that schema addition is only needed when users
-// can drag nodes and expect those positions to survive another session.
+//now: node positions are calculated when the graph loads.
+// X/Y positions could be saved in the database later if users need to move nodes and keep their changes :)    
 function layoutFixtureGraph({ nodes, edges }) {
   const byLevel = new Map();
   for (const node of nodes) {
@@ -98,9 +54,8 @@ function layoutFixtureGraph({ nodes, edges }) {
       return {
         ...node,
         type: "session",
-        position: { x: node.level * 325, y: row * 130 },
-        data: { label: node.label, detail: node.detail },
-        selected: node.selected ?? false
+        position: { x: node.level * 310, y: row * 155 },
+        data: { label: node.label }
       };
     }),
     edges: edges.map(([source, target]) => ({
@@ -117,8 +72,7 @@ function SessionNode({ data, selected }) {
   return (
     <div className={`session-node${selected ? " is-selected" : ""}`}>
       <Handle type="target" position={Position.Left} />
-      <span className="session-node__label">{data.label}</span>
-      <span className="session-node__detail">{data.detail}</span>
+      <span>{data.label}</span>
       <Handle type="source" position={Position.Right} />
     </div>
   );
