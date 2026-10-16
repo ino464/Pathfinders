@@ -85,10 +85,10 @@ its parent, so the graph never contains a loop.
 
 ### Session graph layout
 
-Node positions are currently calculated in the frontend when a graph loads.
-If users later need to move nodes and keep their layout, add `position_x` and
-`position_y` fields to the database.
-
+Node positions are currently calculated in the frontend when a
+graph loads. If users later need to move nodes and keep their
+layout, add `position_x` and `position_y` fields to the
+database.
 
 ## Who enforces access
 
@@ -110,4 +110,3 @@ sessions. Blocking direct writes entirely would mean removing
 write access from the `authenticated` role and having the server
 use the service-role key, which moves every ownership check into
 our own code. That was judged not worth the risk.
-

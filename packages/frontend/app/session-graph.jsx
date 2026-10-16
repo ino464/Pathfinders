@@ -16,14 +16,46 @@ import "@xyflow/react/dist/style.css";
 //hardcoded temporary graph info
 const SESSION_GRAPH_FIXTURE = {
   nodes: [
-    { id: "question", label: "How can I make my study plan sustainable?", level: 0 },
-    { id: "time", label: "Protect focused study time", level: 1 },
-    { id: "energy", label: "Plan around energy levels", level: 1 },
-    { id: "support", label: "Build in accountability", level: 1 },
-    { id: "calendar", label: "Block two 90-minute sessions", level: 2 },
-    { id: "tasks", label: "Break assignments into next actions", level: 2 },
-    { id: "morning", label: "Use mornings for harder work", level: 2 },
-    { id: "check-in", label: "Schedule a weekly check-in", level: 2 }
+    {
+      id: "question",
+      label: "How can I make my study plan sustainable?",
+      level: 0
+    },
+    {
+      id: "time",
+      label: "Protect focused study time",
+      level: 1
+    },
+    {
+      id: "energy",
+      label: "Plan around energy levels",
+      level: 1
+    },
+    {
+      id: "support",
+      label: "Build in accountability",
+      level: 1
+    },
+    {
+      id: "calendar",
+      label: "Block two 90-minute sessions",
+      level: 2
+    },
+    {
+      id: "tasks",
+      label: "Break assignments into next actions",
+      level: 2
+    },
+    {
+      id: "morning",
+      label: "Use mornings for harder work",
+      level: 2
+    },
+    {
+      id: "check-in",
+      label: "Schedule a weekly check-in",
+      level: 2
+    }
   ],
   edges: [
     ["question", "time"],
@@ -37,7 +69,7 @@ const SESSION_GRAPH_FIXTURE = {
 };
 
 //now: node positions are calculated when the graph loads.
-// X/Y positions could be saved in the database later if users need to move nodes and keep their changes :)    
+// X/Y positions could be saved in the database later if users need to move nodes and keep their changes :)
 function layoutFixtureGraph({ nodes, edges }) {
   const byLevel = new Map();
   for (const node of nodes) {
@@ -49,7 +81,9 @@ function layoutFixtureGraph({ nodes, edges }) {
   return {
     nodes: nodes.map((node) => {
       const levelNodes = byLevel.get(node.level);
-      const row = levelNodes.findIndex(({ id }) => id === node.id);
+      const row = levelNodes.findIndex(
+        ({ id }) => id === node.id
+      );
 
       return {
         ...node,
@@ -70,7 +104,8 @@ function layoutFixtureGraph({ nodes, edges }) {
 
 function SessionNode({ data, selected }) {
   return (
-    <div className={`session-node${selected ? " is-selected" : ""}`}>
+    <div
+      className={`session-node${selected ? " is-selected" : ""}`}>
       <Handle type="target" position={Position.Left} />
       <span>{data.label}</span>
       <Handle type="source" position={Position.Right} />
@@ -81,8 +116,13 @@ function SessionNode({ data, selected }) {
 const nodeTypes = { session: SessionNode };
 
 export function SessionGraph() {
-  const graph = useMemo(() => layoutFixtureGraph(SESSION_GRAPH_FIXTURE), []);
-  const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes);
+  const graph = useMemo(
+    () => layoutFixtureGraph(SESSION_GRAPH_FIXTURE),
+    []
+  );
+  const [nodes, setNodes, onNodesChange] = useNodesState(
+    graph.nodes
+  );
   const [edges, , onEdgesChange] = useEdgesState(graph.edges);
 
   const selectNode = useCallback(
@@ -104,7 +144,9 @@ export function SessionGraph() {
   }, [setNodes]);
 
   return (
-    <section className="session-graph" aria-label="Session graph">
+    <section
+      className="session-graph"
+      aria-label="Session graph">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -116,8 +158,7 @@ export function SessionGraph() {
         fitView
         fitViewOptions={{ padding: 0.25 }}
         minZoom={0.3}
-        maxZoom={1.75}
-      >
+        maxZoom={1.75}>
         <Background gap={18} size={1} />
         <Controls />
         <MiniMap zoomable pannable />
