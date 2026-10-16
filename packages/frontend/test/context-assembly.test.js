@@ -305,7 +305,86 @@ describe("context assembly", () => {
     ]);
   });
 
-  test.todo("case 5d: node above a deleted node is excluded");
-  test.todo("case 6: long content is not truncated");
-  test.todo("case 7: rejected ancestor stays in the context");
+    test("case 5d: node above a deleted node is excluded", () => {
+    // setup: R → A → M and R → X → B → M, and B is deleted. X is alive.
+    const nodes = [
+      node("M", "Merged idea", 6),
+      deleted(node("B", "Idea B", 5)),
+      node("X", "Idea X", 4),
+      node("A", "Idea A", 2),
+      node("R", "Root prompt", 1),
+    ];
+    const edges = [
+      edge("R", "A"),
+      edge("A", "M"),
+      edge("R", "X"),
+      edge("X", "B"),
+      edge("B", "M"),
+    ];
+
+    // run: assemble nodes
+    const result = assembleContext(nodes, edges, "M");
+
+    // check: same as 5c. B is out because it is deleted, and X is out
+    // because it only reaches M through B.
+    expect(result).toEqual([
+      { role: "user", content: "Root prompt" },
+      { role: "assistant", content: "Idea A" },
+      { role: "assistant", content: "Merged idea" },
+    ]);
+  });
+
+  test("case 6: long content is not truncated", () => {
+    // setup: same chain as case 2, but every content value is very long.
+    const long = (label) => `${label} ${"word ".repeat(50000)}`;
+    const nodes = [
+      node("E", long("E"), 6),
+      node("D", long("D"), 5),
+      node("C", long("C"), 4),
+      node("B", long("B"), 3),
+      node("A", long("A"), 2),
+      node("R", long("R"), 1),
+    ];
+    const edges = [
+      edge("R", "A"),
+      edge("A", "B"),
+      edge("B", "C"),
+      edge("C", "D"),
+      edge("D", "E"),
+    ];
+
+    // run: assemble nodes
+    const result = assembleContext(nodes, edges, "E");
+
+    // check: still six messages, with each content exactly as it went in
+    expect(result).toEqual([
+      { role: "user", content: long("R") },
+      { role: "assistant", content: long("A") },
+      { role: "assistant", content: long("B") },
+      { role: "assistant", content: long("C") },
+      { role: "assistant", content: long("D") },
+      { role: "assistant", content: long("E") },
+    ]);
+  });
+
+  test("case 7: rejected ancestor stays in the context", () => {
+    // setup: R → A → B, and A has the status "rejected".
+    const nodes = [
+      node("B", "Idea B", 3),
+      { ...node("A", "Idea A", 2), status: "rejected" },
+      node("R", "Root prompt", 1),
+    ];
+    const edges = [edge("R", "A"), edge("A", "B")];
+
+    // run: assemble nodes
+    const result = assembleContext(nodes, edges, "B");
+
+    // check: the function ignores status, so A is still there
+    expect(result).toEqual([
+      { role: "user", content: "Root prompt" },
+      { role: "assistant", content: "Idea A" },
+      { role: "assistant", content: "Idea B" },
+    ]);
+  });
+
 });
