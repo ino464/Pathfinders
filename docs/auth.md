@@ -6,7 +6,9 @@ guest's work moves into an account when they sign in.
 
 ## The first visit
 
-A visitor without a session cookie sees a choice
+Sign-in lives on its own page, `/login`
+(`packages/frontend/app/login/`). A visitor without a session
+cookie who opens any other page is sent there, and sees a choice
 (`packages/frontend/app/auth-choice.js`):
 
 - **Continue with Google**
@@ -14,12 +16,18 @@ A visitor without a session cookie sees a choice
 - **Create an account**
 - **Continue as guest**
 
-Returning visitors who already have a session cookie skip the
-choice. `@supabase/ssr` keeps the session in a cookie, and
-`packages/frontend/proxy.js` refreshes the access token whenever
-it expires. `packages/frontend/app/auth-provider.js` holds the
-signed-in user and exposes every sign-in action to the rest of
-the app through `useAuth()`.
+Once they choose, they land on the app at `/`.
+
+Returning visitors who already have a valid session cookie skip
+the choice: opening `/login` sends them straight to `/`.
+`@supabase/ssr` keeps the session in a cookie, and
+`packages/frontend/proxy.js` checks it on every page request
+with `getClaims()`, which verifies the token and refreshes it
+when it expires. The proxy makes both redirects and leaves
+`/auth/callback` and `/api/*` alone. Signing out also returns
+the person to `/login`. `packages/frontend/app/auth-provider.js`
+holds the signed-in user and exposes every sign-in action to the
+rest of the app through `useAuth()`.
 
 ## Guests
 
@@ -38,7 +46,7 @@ Authentication, Sign In / Providers in the hosted dashboard.
 
 A guest has no email or password, so if they lose their cookie
 they cannot get back in. For that reason guests get no sign out
-button. They get "Save your work to an account" instead.
+button. They get "Save your work to an account" on `/` instead.
 
 ## Email and password
 
@@ -69,8 +77,9 @@ an existing account gets the same merge as signing in.
 **Continue with Google** calls `signInWithOAuth`. The browser
 goes to Google, then to Supabase, then back to
 `packages/frontend/app/auth/callback/route.js`, which exchanges
-the code for a session cookie. The same route handles links from
-Supabase emails.
+the code for a session cookie and sends the person to `/`. If
+sign-in fails, it sends them back to `/login` with the error.
+The same route handles links from Supabase emails.
 
 Setting it up:
 

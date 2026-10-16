@@ -192,8 +192,10 @@ API provider.
    ```
 
 8. Open [http://localhost:3000](http://localhost:3000) in your
-   browser. Choose Continue with Google, sign in or create an
-   account with email, or continue as a guest.
+   browser. Without a session you are sent to `/login`. Choose
+   Continue with Google, sign in or create an account with
+   email, or continue as a guest, and you land on the session
+   graph at `/`.
 
 Local Supabase Studio, where you can browse the tables, runs at
 [http://127.0.0.1:54323](http://127.0.0.1:54323).

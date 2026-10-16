@@ -99,7 +99,7 @@ describe("GET /auth/callback", () => {
   test("reports a link with no code or token", async () => {
     const location = await callback("");
 
-    expect(location.pathname).toBe("/");
+    expect(location.pathname).toBe("/login");
     expect(location.searchParams.get("auth_error")).toBe(
       "Missing code or token in the link."
     );
@@ -113,6 +113,7 @@ describe("GET /auth/callback", () => {
 
     const location = await callback("?code=abc");
 
+    expect(location.pathname).toBe("/login");
     expect(location.searchParams.get("auth_error")).toBe(
       "invalid flow state"
     );
@@ -126,6 +127,7 @@ describe("GET /auth/callback", () => {
 
     expect(fake.client.calls).toEqual([]);
     expect(fake.finishGuestMerge).not.toHaveBeenCalled();
+    expect(location.pathname).toBe("/login");
     expect(location.searchParams.get("auth_error")).toBe(
       "User cancelled"
     );

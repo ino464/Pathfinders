@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "./auth-provider";
-import { AuthChoice } from "./auth-choice";
 import { GuestUpgrade } from "./guest-upgrade";
 import { MergeNotice } from "./merge-notice";
 
@@ -47,15 +47,18 @@ function AccountView({ user }) {
 
 export function CurrentUser() {
   const { user, loading } = useAuth();
+  const router = useRouter();
 
-  if (loading) return <p>Loading…</p>;
+  useEffect(() => {
+    if (!loading && !user) router.replace("/login");
+  }, [loading, user, router]);
+
+  if (loading || !user) return <p>Loading…</p>;
 
   return (
     <>
       <MergeNotice />
-      {!user ? (
-        <AuthChoice />
-      ) : user.is_anonymous ? (
+      {user.is_anonymous ? (
         <GuestView user={user} />
       ) : (
         <AccountView user={user} />

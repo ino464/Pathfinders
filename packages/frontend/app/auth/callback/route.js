@@ -9,6 +9,12 @@ function safeNext(next) {
   return "/";
 }
 
+function redirectToLogin(origin, message) {
+  const url = new URL("/login", origin);
+  url.searchParams.set("auth_error", message);
+  return NextResponse.redirect(url);
+}
+
 function redirectHome(origin, param, message) {
   const url = new URL("/", origin);
   url.searchParams.set(param, message);
@@ -26,7 +32,7 @@ export async function GET(request) {
     searchParams.get("error_description") ??
     searchParams.get("error");
   if (providerError) {
-    return redirectHome(origin, "auth_error", providerError);
+    return redirectToLogin(origin, providerError);
   }
 
   const supabase = await createClient();
@@ -43,7 +49,7 @@ export async function GET(request) {
   }
 
   if (error) {
-    return redirectHome(origin, "auth_error", error.message);
+    return redirectToLogin(origin, error.message);
   }
 
   try {
