@@ -1,6 +1,6 @@
 :root {
-  color: #172033;
-  background: #f6f8fc;
+  color: #171717;
+  background: #ffffff;
   font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -10,97 +10,12 @@
 
 body {
   margin: 0;
-  min-height: 100vh;
-  background: #f6f8fc;
 }
 
 main {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem clamp(1rem, 4vw, 3rem);
+  padding: 2rem;
 }
 
 h1 {
   margin-top: 0;
-}
-
-.session-graph {
-  height: min(66vh, 620px);
-  min-height: 430px;
-  margin-top: 1.5rem;
-  overflow: hidden;
-  border: 1px solid #d8dfec;
-  border-radius: 16px;
-  background: #ffffff;
-  box-shadow: 0 12px 30px rgb(31 53 89 / 8%);
-}
-
-.session-graph .react-flow {
-  background: linear-gradient(145deg, #f9fbff, #f2f6ff);
-}
-
-.session-graph .react-flow__edge-path {
-  stroke: #8394b8;
-  stroke-width: 2;
-}
-
-.session-graph .react-flow__controls {
-  overflow: hidden;
-  border: 1px solid #d8dfec;
-  border-radius: 8px;
-  box-shadow: 0 3px 10px rgb(31 53 89 / 12%);
-}
-
-.session-graph .react-flow__controls-button {
-  width: 28px;
-  height: 28px;
-  border-bottom-color: #d8dfec;
-  background: #ffffff;
-  fill: #354568;
-}
-
-.session-graph .react-flow__minimap {
-  border: 1px solid #d8dfec;
-  border-radius: 8px;
-  background: #ffffff;
-}
-
-.session-node {
-  width: 230px;
-  padding: 0.8rem 1rem;
-  border: 2px solid #bdc9df;
-  border-radius: 10px;
-  background: #ffffff;
-  color: #253552;
-  font-size: 0.9rem;
-  font-weight: 600;
-  line-height: 1.35;
-  text-align: center;
-  box-shadow: 0 3px 8px rgb(31 53 89 / 10%);
-  transition: border-color 120ms ease, box-shadow 120ms ease,
-    transform 120ms ease;
-}
-
-.session-node:hover {
-  border-color: #657da9;
-}
-
-.session-node.is-selected {
-  border-color: #2459d6;
-  background: #edf3ff;
-  box-shadow: 0 0 0 4px rgb(36 89 214 / 18%),
-    0 7px 16px rgb(36 89 214 / 20%);
-  color: #12337f;
-  transform: translateY(-2px);
-}
-
-.session-node .react-flow__handle {
-  width: 8px;
-  height: 8px;
-  border: 1px solid #ffffff;
-  background: #6f83a7;
-}
-
-.session-node.is-selected .react-flow__handle {
-  background: #2459d6;
 }
