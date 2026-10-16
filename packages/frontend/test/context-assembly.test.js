@@ -21,6 +21,17 @@ const edge = (parent, child) => ({
   child_node_id: child,
 });
 
+// makes a preference object, higher time = created later
+const pref = (id, content, time) => ({
+  id,
+  content,
+  created_at: `2026-01-01T00:00:0${time}Z`,
+});
+
+// copies a node and marks it deleted
+const deleted = (n) => ({ ...n, deleted_at: "2026-01-01T00:00:09Z" });
+
+
 describe("context assembly", () => {
 
   test("case 1: root target gives one user message", () => {
@@ -184,12 +195,116 @@ describe("context assembly", () => {
     ]);
   });
 
-  test.todo("case 4a: preferences give one system message");
-  test.todo("case 4b: preferences come before a deeper path");
-  test.todo("case 4c: no preferences gives no system message");
-  test.todo("case 5a: deleted target throws");
-  test.todo("case 5b: deleted ancestor on only path throws");
-  test.todo("case 5c: merged node excludes a deleted parent");
+  test("case 4a: preferences give one system message", () => {
+    // setup: root only, two preferences listed newest first on purpose (prefrences optional)
+    const nodes = [node("R", "Root prompt", 1)];
+    const preferences = [
+      pref("P2", "No ideas that need a car", 3),
+      pref("P1", "Keep every suggestion low budget", 2),
+    ];
+
+    // run: preferences are the 4th argument
+    const result = assembleContext(nodes, [], "R", preferences);
+
+    // check: one system message first, oldest preference first, joined by "\n"
+    expect(result).toEqual([
+      {
+        role: "system",
+        content: "Keep every suggestion low budget\nNo ideas that need a car",
+      },
+      { role: "user", content: "Root prompt" },
+    ]);
+  });
+
+  test("case 4b: preferences come before a deeper path", () => {
+    // setup: R → A with the same two preferences.
+    const nodes = [node("A", "Idea A", 2), node("R", "Root prompt", 1)];
+    const edges = [edge("R", "A")];
+    const preferences = [
+      pref("P2", "No ideas that need a car", 3),
+      pref("P1", "Keep every suggestion low budget", 2),
+    ];
+
+    // run: assemble with target A
+    const result = assembleContext(nodes, edges, "A", preferences);
+
+    // check: system message (prefrences) is still first, then the path
+    expect(result).toEqual([
+      {
+        role: "system",
+        content: "Keep every suggestion low budget\nNo ideas that need a car",
+      },
+      { role: "user", content: "Root prompt" },
+      { role: "assistant", content: "Idea A" },
+    ]);
+  });
+
+  test("case 4c: no preferences gives no system message", () => {
+    // setup: R → A, empty preferences list.
+    const nodes = [node("A", "Idea A", 2), node("R", "Root prompt", 1)];
+    const edges = [edge("R", "A")];
+
+    // run: assemble with an empty list
+    const result = assembleContext(nodes, edges, "A", []);
+
+    // check: no system message at all
+    expect(result).toEqual([
+      { role: "user", content: "Root prompt" },
+      { role: "assistant", content: "Idea A" },
+    ]);
+  });
+
+  test("case 5a: deleted target throws", () => {
+    // setup: R → A, and A (the target) is deleted.
+    const nodes = [
+      deleted(node("A", "Idea A", 2)),
+      node("R", "Root prompt", 1),
+    ];
+    const edges = [edge("R", "A")];
+
+    // run + check: wrap the call in a function, or the throw escapes expect()
+    expect(() => assembleContext(nodes, edges, "A")).toThrow();
+  });
+
+  test("case 5b: deleted ancestor on only path throws", () => {
+    // setup: R → A → B, and A is deleted.
+    const nodes = [
+      node("B", "Idea B", 3),
+      deleted(node("A", "Idea A", 2)),
+      node("R", "Root prompt", 1),
+    ];
+    const edges = [edge("R", "A"), edge("A", "B")];
+
+    // run + check: B is alive but its only route to the root goes through A
+    expect(() => assembleContext(nodes, edges, "B")).toThrow();
+  });
+
+  test("case 5c: merged node excludes a deleted parent", () => {
+    // setup: R → A → M and R → B → M, and B is deleted.
+    const nodes = [
+      node("M", "Merged idea", 4),
+      deleted(node("B", "Idea B", 3)),
+      node("A", "Idea A", 2),
+      node("R", "Root prompt", 1),
+    ];
+    const edges = [
+      edge("R", "A"),
+      edge("R", "B"),
+      edge("A", "M"),
+      edge("B", "M"),
+    ];
+
+    // run: assemble nodes
+    const result = assembleContext(nodes, edges, "M");
+
+    // check: M is still reachable through A, so B is left out and the rest stays
+    expect(result).toEqual([
+      { role: "user", content: "Root prompt" },
+      { role: "assistant", content: "Idea A" },
+      { role: "assistant", content: "Merged idea" },
+    ]);
+  });
+
   test.todo("case 5d: node above a deleted node is excluded");
   test.todo("case 6: long content is not truncated");
   test.todo("case 7: rejected ancestor stays in the context");
