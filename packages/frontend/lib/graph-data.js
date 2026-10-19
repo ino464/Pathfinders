@@ -88,6 +88,61 @@ export async function getSessionGraph(sessionId) {
   };
 }
 
+// Raw rows for context assembly, which needs created_at and
+// deleted_at. Deleted nodes and their edges are included on
+// purpose: context assembly decides how to treat them.
+export async function getExpansionInputs(sessionId) {
+  const supabase = await createClient();
+
+  const [nodesResult, edgesResult, preferencesResult] =
+    await Promise.all([
+      supabase
+        .from("nodes")
+        .select("id, content, status, created_at, deleted_at")
+        .eq("session_id", sessionId),
+      supabase
+        .from("edges")
+        .select("parent_node_id, child_node_id")
+        .eq("session_id", sessionId),
+      supabase
+        .from("preferences")
+        .select("id, content, created_at")
+        .eq("session_id", sessionId)
+    ]);
+  if (nodesResult.error) throw nodesResult.error;
+  if (edgesResult.error) throw edgesResult.error;
+  if (preferencesResult.error) throw preferencesResult.error;
+
+  return {
+    nodes: nodesResult.data,
+    edges: edgesResult.data,
+    preferences: preferencesResult.data
+  };
+}
+
+// Writes the children and their edges in one transaction
+// through the add_children database function, so a failure
+// leaves no node without a parent.
+export async function addChildren(
+  sessionId,
+  parentId,
+  contents
+) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("add_children", {
+    p_session_id: sessionId,
+    p_parent_node_id: parentId,
+    p_contents: contents
+  });
+  if (error) throw error;
+
+  return {
+    nodes: data.nodes.map(toFlowNode),
+    edges: data.edges.map(toFlowEdge)
+  };
+}
+
 export async function addNode(
   sessionId,
   content,

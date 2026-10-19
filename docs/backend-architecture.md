@@ -49,9 +49,10 @@ The data access layer is a single module,
 the only code in the app that reads or writes the `sessions`,
 `nodes`, `edges` and `preferences` tables, apart from moving a
 guest's sessions into an account when they sign in
-(`lib/guest-merge.js`, see `docs/auth.md`). It exports six
-functions: `createSession`, `getSessionGraph`, `addNode`,
-`addEdge`, `updateNodeStatus` and `deleteSubtree`.
+(`lib/guest-merge.js`, see `docs/auth.md`). It exports eight
+functions: `createSession`, `getSessionGraph`,
+`getExpansionInputs`, `addNode`, `addEdge`, `addChildren`,
+`updateNodeStatus` and `deleteSubtree`.
 
 - The module imports `server-only`, so importing it from a
   client component fails the build.
@@ -60,6 +61,14 @@ functions: `createSession`, `getSessionGraph`, `addNode`,
   cookie, so every query runs as the signed-in user.
 - `getSessionGraph` returns `{ nodes, edges }` in the shape
   React Flow uses, so the canvas does not reshape data.
+- `getExpansionInputs` returns the raw rows that context
+  assembly needs: nodes with `created_at` and `deleted_at`,
+  edges, and preferences. It includes deleted nodes, because
+  context assembly decides how to treat them.
+- `addChildren` writes the children of one node and their edges
+  through the `add_children` database function, in one
+  transaction. If any insert fails, nothing is written, so a
+  failed expansion cannot leave a node without a parent.
 - Because everything goes through these six functions, the
   canvas (#33) can be built against fixture data, and tests can
   replace the Supabase client with a fake one.
