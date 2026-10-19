@@ -11,6 +11,8 @@ vi.mock("../lib/supabase-server", () => ({
 const {
   createSession,
   getSessionGraph,
+  getExpansionInputs,
+  addChildren,
   addNode,
   addEdge,
   updateNodeStatus,
@@ -49,9 +51,16 @@ function fakeClient({
     return builder;
   }
 
+  async function rpc(name, args) {
+    calls.push({ rpc: name, args });
+    const queue = results.rpc ?? [];
+    return queue.shift() ?? { data: null, error: null };
+  }
+
   return {
     calls,
     from,
+    rpc,
     auth: {
       getUser: async () => ({ data: { user }, error: null })
     }
@@ -203,6 +212,129 @@ describe("getSessionGraph", () => {
       "deleted_at",
       null
     ]);
+  });
+});
+
+describe("getExpansionInputs", () => {
+  test("returns raw rows, deleted nodes included", async () => {
+    const nodes = [
+      {
+        id: "r",
+        content: "Root",
+        status: "pending",
+        created_at: "2026-01-01T00:00:01Z",
+        deleted_at: null
+      },
+      {
+        id: "a",
+        content: "Idea A",
+        status: "pending",
+        created_at: "2026-01-01T00:00:02Z",
+        deleted_at: "2026-01-02T00:00:00Z"
+      }
+    ];
+    const edges = [{ parent_node_id: "r", child_node_id: "a" }];
+    const preferences = [
+      {
+        id: "p",
+        content: "Keep it cheap",
+        created_at: "2026-01-01T00:00:03Z"
+      }
+    ];
+    fake.client = fakeClient({
+      results: {
+        nodes: [{ data: nodes, error: null }],
+        edges: [{ data: edges, error: null }],
+        preferences: [{ data: preferences, error: null }]
+      }
+    });
+
+    const inputs = await getExpansionInputs("s1");
+
+    expect(inputs).toEqual({ nodes, edges, preferences });
+    for (const call of fake.client.calls) {
+      expect(call.ops).toContainEqual([
+        "eq",
+        "session_id",
+        "s1"
+      ]);
+      expect(call.ops.map(([op]) => op)).not.toContain("is");
+    }
+  });
+
+  test("throws the Supabase error when a read fails", async () => {
+    const failure = new Error("read failed");
+    fake.client = fakeClient({
+      results: { preferences: [{ data: null, error: failure }] }
+    });
+    await expect(getExpansionInputs("s1")).rejects.toBe(
+      failure
+    );
+  });
+});
+
+describe("addChildren", () => {
+  test("calls add_children and returns React Flow shapes", async () => {
+    fake.client = fakeClient({
+      results: {
+        rpc: [
+          {
+            data: {
+              nodes: [
+                {
+                  id: "c1",
+                  content: "Child",
+                  status: "pending",
+                  position_x: null,
+                  position_y: null
+                }
+              ],
+              edges: [
+                {
+                  id: "e1",
+                  parent_node_id: "p",
+                  child_node_id: "c1"
+                }
+              ]
+            },
+            error: null
+          }
+        ]
+      }
+    });
+
+    const children = await addChildren("s1", "p", ["Child"]);
+
+    expect(children).toEqual({
+      nodes: [
+        {
+          id: "c1",
+          position: { x: 0, y: 0 },
+          data: { content: "Child", status: "pending" }
+        }
+      ],
+      edges: [{ id: "e1", source: "p", target: "c1" }]
+    });
+    expect(fake.client.calls).toEqual([
+      {
+        rpc: "add_children",
+        args: {
+          p_session_id: "s1",
+          p_parent_node_id: "p",
+          p_contents: ["Child"]
+        }
+      }
+    ]);
+  });
+
+  test("throws the Supabase error when the call fails", async () => {
+    const failure = new Error("rpc failed");
+    fake.client = fakeClient({
+      results: { rpc: [{ data: null, error: failure }] }
+    });
+    await expect(
+      addChildren("s1", "p", ["Child"])
+    ).rejects.toBe(failure);
   });
 });
 
