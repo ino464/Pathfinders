@@ -51,7 +51,7 @@ button. They get "Save your work to an account" on `/` instead.
 ## Email and password
 
 - **Create an account** calls `signUp`. With email confirmation
-  off, which is the local default
+  off, as it is on the hosted project and in the local stack
   (`enable_confirmations = false`), the person is signed in
   straight away. With it on, Supabase emails a link and the
   person is signed in when they open it.
@@ -63,8 +63,9 @@ button. They get "Save your work to an account" on `/` instead.
 `resetPasswordForEmail`. Supabase emails a link that goes
 through `/auth/callback` to `/set-password`
 (`packages/frontend/app/set-password/`), where the person
-chooses a new password with `updateUser({ password })`. Locally
-the email can be read at http://127.0.0.1:54324.
+chooses a new password with `updateUser({ password })`. Against
+the hosted project the email goes to the real inbox. With the
+optional local stack it can be read at http://127.0.0.1:54324.
 
 The link only works in the browser that asked for it, because
 `@supabase/ssr` keeps a PKCE code verifier in that browser's

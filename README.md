@@ -132,11 +132,10 @@ Before running Pathfinders, install:
 - [Git](https://git-scm.com/)
 - [Node.js](https://nodejs.org/)
 - npm
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/),
-  which runs a local copy of Supabase
 
-You will also need access to the team's Supabase project and LLM
-API provider.
+You will also need access to the team's hosted Supabase project
+and LLM API provider. Development runs against the hosted
+project, so Docker is not needed.
 
 ### Installation
 
@@ -158,59 +157,40 @@ API provider.
    npm install
    ```
 
-4. Start Docker Desktop, then start the local Supabase stack.
-   The first run downloads the images and applies every
-   migration in `supabase/migrations`:
-
-   ```bash
-   npx supabase start
-   ```
-
-5. Create the frontend environment file:
+4. Create the frontend environment file:
 
    ```bash
    cp packages/frontend/.env.example packages/frontend/.env.local
    ```
 
-6. Run `npx supabase status` and copy two values into
-   `packages/frontend/.env.local`: the API URL as
-   `NEXT_PUBLIC_SUPABASE_URL` and the publishable key as
-   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Use the base API URL,
-   such as `http://127.0.0.1:54321`, not the storage or S3 URL.
-   Also copy the secret key as `SUPABASE_SECRET_KEY`. Only the
-   server uses it, to move a guest's work into an account.
+5. Fill in `packages/frontend/.env.local` from the hosted
+   project's dashboard. Set `NEXT_PUBLIC_SUPABASE_URL` to
+   `https://<project-ref>.supabase.co`, and copy the publishable
+   key as `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and the secret
+   key as `SUPABASE_SECRET_KEY` from Project Settings, API Keys.
+   Only the server uses the secret key, to move a guest's work
+   into an account. Add the LLM key as `GROQ_API_KEY`.
 
-   To try Google sign-in locally, also put the Google client
-   secret in `supabase/.env` as
-   `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET` and restart Supabase.
-   See [docs/auth.md](docs/auth.md#google).
-
-7. Start the development server:
+6. Start the development server:
 
    ```bash
    npm run dev -w frontend
    ```
 
-8. Open [http://localhost:3000](http://localhost:3000) in your
+7. Open [http://localhost:3000](http://localhost:3000) in your
    browser. Without a session you are sent to `/login`. Choose
    Continue with Google, sign in or create an account with
    email, or continue as a guest, and you land on the session
    graph at `/`.
 
-Local Supabase Studio, where you can browse the tables, runs at
-[http://127.0.0.1:54323](http://127.0.0.1:54323).
+Everything you create in development is stored in the hosted
+database, which you can browse in the dashboard's Table Editor.
 
 ### Working with the database
 
 The schema lives in `supabase/migrations` and is never edited
-through the dashboard. After pulling changes:
-
-- If `supabase/migrations` changed, run `npx supabase db reset`
-  to rebuild the local database. This deletes local data.
-- If `supabase/config.toml` changed, run `npx supabase stop` and
-  then `npx supabase start`.
-
-To apply migrations to the hosted project:
+through the dashboard. When `supabase/migrations` changes, apply
+the new migrations to the hosted project:
 
 ```bash
 npx supabase login
@@ -219,6 +199,31 @@ npx supabase db push
 ```
 
 The project ref is the id in the hosted project's dashboard URL.
+You only need `login` and `link` once.
+
+### Optional: local Supabase stack
+
+To test a migration without touching the hosted database, you
+can run a local copy of Supabase in
+[Docker Desktop](https://www.docker.com/products/docker-desktop/):
+
+1. Start Docker Desktop, then run `npx supabase start`. The
+   first run downloads the images and applies every migration.
+2. Run `npx supabase status` and put its API URL (such as
+   `http://127.0.0.1:54321`), publishable key and secret key in
+   `packages/frontend/.env.local` in place of the hosted values.
+3. After pulling a change to `supabase/migrations`, run
+   `npx supabase db reset`, which deletes local data. After a
+   change to `supabase/config.toml`, run `npx supabase stop` and
+   then `npx supabase start`.
+
+For Google sign-in on the local stack, put the Google client
+secret in `supabase/.env` as
+`SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET` and restart Supabase. See
+[docs/auth.md](docs/auth.md#google). Local Supabase Studio runs
+at [http://127.0.0.1:54323](http://127.0.0.1:54323).
+
+Switch `.env.local` back to the hosted values when you are done.
 
 ## Environment Configuration
 
@@ -238,16 +243,17 @@ client component or sent to the browser.
 
 ## Development Commands
 
-| Command                     | Description                         |
-| --------------------------- | ----------------------------------- |
-| `npm run dev -w frontend`   | Starts the local development server |
-| `npm run build -w frontend` | Creates a production build          |
-| `npm run lint`              | Checks the project with ESLint      |
-| `npm run format:check`      | Checks code formatting              |
-| `npm run format`            | Fixes code formatting               |
-| `npx supabase start`        | Starts the local Supabase stack     |
-| `npx supabase stop`         | Stops the local Supabase stack      |
-| `npx supabase db reset`     | Rebuilds the local database         |
+| Command                     | Description                     |
+| --------------------------- | ------------------------------- |
+| `npm run dev -w frontend`   | Starts the development server   |
+| `npm run build -w frontend` | Creates a production build      |
+| `npm run lint`              | Checks the project with ESLint  |
+| `npm run format:check`      | Checks code formatting          |
+| `npm run format`            | Fixes code formatting           |
+| `npx supabase db push`      | Applies migrations to hosted    |
+| `npx supabase start`        | Starts the optional local stack |
+| `npx supabase stop`         | Stops the optional local stack  |
+| `npx supabase db reset`     | Rebuilds the local database     |
 
 ## Continuous Integration
 
