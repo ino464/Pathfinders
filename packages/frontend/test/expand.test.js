@@ -255,3 +255,31 @@ describe("rate limit", () => {
     expect(fake.addChildren).toHaveBeenCalled();
   });
 });
+
+describe("expansion instruction (#52)", () => {
+  test.todo(
+    "case 1: sends only part 1 with no children and no direction"
+  );
+  test.todo("case 2: lists live children in created_at order");
+  test.todo("case 3: leaves deleted children out of the list");
+  test.todo("case 4: adds the trimmed direction after part 1");
+  test.todo(
+    "case 5: puts part 1, the children and the direction in that order"
+  );
+  test.todo("case 6: treats a blank direction as no direction");
+  test.todo(
+    "case 8: rejects an idea over 300 characters with 502 and writes nothing"
+  );
+  test.todo(
+    "case 9: sends the root and then the part 1 message for a root target"
+  );
+  test.todo(
+    "rule 3: lists children with the same created_at in id order"
+  );
+  test.todo(
+    "rule 8: accepts an idea of exactly 300 characters after trimming"
+  );
+  test.todo(
+    "decision 10: builds the same text as the instruction in docs/expansion-instruction.md"
+  );
+});

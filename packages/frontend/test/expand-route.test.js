@@ -120,3 +120,15 @@ describe("POST /api/expand", () => {
     });
   });
 });
+
+describe("POST /api/expand direction (#52)", () => {
+  test.todo(
+    "case 7: answers 400 for a direction that is not a string or is over 500 characters, without expanding"
+  );
+  test.todo(
+    "rule 6: accepts a direction of 500 characters after trimming surrounding spaces"
+  );
+  test.todo(
+    "rule 7: expands a request with no instruction field as one with an empty direction"
+  );
+});
