@@ -261,23 +261,42 @@ describe("expansion instruction (#52)", () => {
     "case 1: sends only part 1 with no children and no direction"
   );
   test.todo("case 2: lists live children in created_at order");
-  test.todo("case 3: leaves deleted children out of the list");
+  test.todo(
+    "case 3: leaves deleted children out and drops part 2 when none are live"
+  );
   test.todo("case 4: adds the trimmed direction after part 1");
   test.todo(
     "case 5: puts part 1, the children and the direction in that order"
   );
-  test.todo("case 6: treats a blank direction as no direction");
   test.todo(
-    "case 8: rejects an idea over 300 characters with 502 and writes nothing"
+    "case 6: treats a blank or null direction as no direction"
+  );
+  test.todo(
+    "case 8: rejects an idea of 301 characters with 502 and writes nothing"
+  );
+  test.todo(
+    "case 8: rejects two ideas equal ignoring case with 502 and writes nothing"
   );
   test.todo(
     "case 9: sends the root and then the part 1 message for a root target"
   );
   test.todo(
-    "rule 3: lists children with the same created_at in id order"
+    "case 10: lists the 20 newest of 25 live children, oldest first"
   );
   test.todo(
-    "rule 8: accepts an idea of exactly 300 characters after trimming"
+    "case 11: collapses a newline in child content to one space"
+  );
+  test.todo(
+    "rule 4: orders children with the same created_at by id"
+  );
+  test.todo(
+    "rule 5: collapses whitespace runs in the direction to one space"
+  );
+  test.todo(
+    "rule 11: never passes the direction to addChildren"
+  );
+  test.todo(
+    "interface: the root test expects part 2 listing Idea A"
   );
   test.todo(
     "decision 10: builds the same text as the instruction in docs/expansion-instruction.md"
