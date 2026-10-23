@@ -120,3 +120,15 @@ describe("POST /api/expand", () => {
     });
   });
 });
+
+describe("POST /api/expand direction (#52)", () => {
+  test.todo(
+    "case 7: answers 400 for a direction that is a number, without expanding"
+  );
+  test.todo(
+    "case 7: answers 400 for a direction of 501 characters after trimming, without expanding"
+  );
+  test.todo(
+    "rule 9: passes an empty direction for a missing, null or blank instruction"
+  );
+});
