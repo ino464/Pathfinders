@@ -10,23 +10,23 @@ Context assembly (`docs/context-assembly-cases.md`) adds no
 instruction text. Everything the model is told to do comes from
 this file.
 
-**Review status:** draft. Cole to confirm each decision.
+**Review status:** Cole accepted each decision on 2026-10-23.
 
 ## Decisions
 
 | #   | Decision            | Choice                                                                                                                                         | Status   |
 | --- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| 1   | Branch count        | Exactly 3 ideas per expansion, as today (`CHILD_COUNT`). The text below is written for 3. Changing the count means changing the text.          | Proposed |
-| 2   | Idea shape          | The prompt asks for one sentence of at most 25 words, a statement with no numbering, label or question. Only the length limit is enforced.     | Proposed |
-| 3   | Hard length limit   | An idea longer than 300 characters is a malformed answer. The expansion fails with 502 and writes nothing.                                     | Proposed |
-| 4   | Variety             | The prompt asks for ideas that differ from each other and from the context. Two ideas that are equal ignoring case are a malformed answer.     | Proposed |
-| 5   | Repeated expansions | The instruction lists up to 20 of the newest live children the target already has and tells the model not to repeat them.                      | Proposed |
-| 6   | User direction      | The request body takes an optional `instruction` string. It is added to the same trailing `user` message, after the fixed text.                | Proposed |
-| 7   | Direction limits    | Trimmed. Missing, `null`, empty or only whitespace means no direction. Longer than 500 characters, or any other type, answers 400.             | Proposed |
-| 8   | Format wins         | The fixed answer format comes before the direction and the direction is told to keep it. A direction cannot change the count or the JSON form. | Proposed |
-| 9   | Storage             | The direction is not stored. The children it produced carry its effect. No migration.                                                          | Proposed |
-| 10  | Single source       | The text below is the source of truth. A test reads it from this file and checks that the code builds the same text.                           | Proposed |
-| 11  | Tuning              | Wording and model settings such as temperature are tuned in the second PR. Each change is recorded in the tuning log below.                    | Proposed |
+| 1   | Branch count        | Exactly 3 ideas per expansion, as today (`CHILD_COUNT`). The text below is written for 3. Changing the count means changing the text.          | Accepted |
+| 2   | Idea shape          | The prompt asks for one sentence of at most 25 words, a statement with no numbering, label or question. Only the length limit is enforced.     | Accepted |
+| 3   | Hard length limit   | An idea longer than 300 characters is a malformed answer. The expansion fails with 502 and writes nothing.                                     | Accepted |
+| 4   | Variety             | The prompt asks for ideas that differ from each other and from the context. Two ideas that are equal ignoring case are a malformed answer.     | Accepted |
+| 5   | Repeated expansions | The instruction lists up to 20 of the newest live children the target already has and tells the model not to repeat them.                      | Accepted |
+| 6   | User direction      | The request body takes an optional `instruction` string. It is added to the same trailing `user` message, after the fixed text.                | Accepted |
+| 7   | Direction limits    | Trimmed. Missing, `null`, empty or only whitespace means no direction. Longer than 500 characters, or any other type, answers 400.             | Accepted |
+| 8   | Format wins         | The fixed answer format comes before the direction and the direction is told to keep it. A direction cannot change the count or the JSON form. | Accepted |
+| 9   | Storage             | The direction is not stored. The children it produced carry its effect. No migration.                                                          | Accepted |
+| 10  | Single source       | The text below is the source of truth. A test reads it from this file and checks that the code builds the same text.                           | Accepted |
+| 11  | Tuning              | Wording and model settings such as temperature are tuned in the second PR. Each change is recorded in the tuning log below.                    | Accepted |
 
 ## Interface
 

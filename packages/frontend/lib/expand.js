@@ -8,14 +8,57 @@ export const TIMEOUT_MS = 15_000;
 export const RATE_LIMIT_EXPANSIONS = 10;
 export const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 
-// Minimal instruction so that the message list ends with a user
-// message. Issue #52 replaces it with the tuned version and
-// documents it in docs/.
-export const INSTRUCTION =
-  `Suggest ${CHILD_COUNT} different ideas that build on the ` +
-  `last message above. Answer with JSON only, in the form ` +
-  `{"ideas": ["...", "...", "..."]}, with exactly ` +
-  `${CHILD_COUNT} strings.`;
+export const MAX_LISTED_CHILDREN = 20;
+export const MAX_IDEA_LENGTH = 300;
+
+export const BASE_INSTRUCTION =
+  "Suggest 3 new ideas that build on the last message above. " +
+  "Each idea is one sentence of at most 25 words. " +
+  "Make the 3 ideas clearly different from each other and " +
+  "from every idea above. Write each idea as a statement, " +
+  "without numbering, labels or questions. Answer with JSON " +
+  'only, in the form {"ideas": ["...", "...", "..."]}, with ' +
+  "exactly 3 strings.";
+
+function collapseWhitespace(text) {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function byCreatedAtThenId(a, b) {
+  const time =
+    Date.parse(a.created_at) - Date.parse(b.created_at);
+  if (time !== 0) return time;
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+
+export function buildInstruction(children, direction) {
+  const parts = [BASE_INSTRUCTION];
+
+  const listed = children
+    .filter((c) => !c.deleted_at)
+    .sort(byCreatedAtThenId)
+    .slice(-MAX_LISTED_CHILDREN);
+  if (listed.length > 0) {
+    parts.push(
+      [
+        "These ideas already branch from the last message, so do not repeat them:",
+        ...listed.map(
+          (c) => `- ${collapseWhitespace(c.content)}`
+        )
+      ].join("\n")
+    );
+  }
+
+  const steer = collapseWhitespace(direction ?? "");
+  if (steer !== "") {
+    parts.push(
+      `The user wants this direction: ${steer}\n` +
+        "Follow it, but keep the answer format above."
+    );
+  }
+
+  return parts.join("\n\n");
+}
 
 export class ExpandError extends Error {
   constructor(status, message) {
@@ -25,8 +68,10 @@ export class ExpandError extends Error {
 }
 
 // Returns the trimmed ideas, or throws when the model's answer
-// is not exactly CHILD_COUNT non-empty strings in an "ideas"
-// array. Nothing is written when this throws.
+// is not exactly CHILD_COUNT non-empty strings of at most
+// MAX_IDEA_LENGTH characters in an "ideas" array, or when two
+// ideas are equal ignoring case. Nothing is written when this
+// throws.
 export function parseIdeas(text) {
   let parsed;
   try {
@@ -55,6 +100,21 @@ export function parseIdeas(text) {
       "The model answered with an empty idea."
     );
   }
+  if (trimmed.some((idea) => idea.length > MAX_IDEA_LENGTH)) {
+    throw new ExpandError(
+      502,
+      "The model answered with an idea that is too long."
+    );
+  }
+  const distinct = new Set(
+    trimmed.map((idea) => idea.toLowerCase())
+  );
+  if (distinct.size !== trimmed.length) {
+    throw new ExpandError(
+      502,
+      "The model answered with the same idea twice."
+    );
+  }
   return trimmed;
 }
 
@@ -73,7 +133,11 @@ export function isRateLimited(nodes, edges, now) {
   );
 }
 
-export async function expandNode(sessionId, nodeId) {
+export async function expandNode(
+  sessionId,
+  nodeId,
+  direction = ""
+) {
   const { nodes, edges, preferences } =
     await getExpansionInputs(sessionId);
 
@@ -97,7 +161,16 @@ export async function expandNode(sessionId, nodeId) {
     nodeId,
     preferences
   );
-  messages.push({ role: "user", content: INSTRUCTION });
+  const childIds = new Set(
+    edges
+      .filter((e) => e.parent_node_id === nodeId)
+      .map((e) => e.child_node_id)
+  );
+  const children = nodes.filter((n) => childIds.has(n.id));
+  messages.push({
+    role: "user",
+    content: buildInstruction(children, direction)
+  });
 
   let text;
   try {

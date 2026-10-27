@@ -4,6 +4,8 @@ import { ExpandError, expandNode } from "../../../lib/expand";
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const MAX_DIRECTION_LENGTH = 500;
+
 export async function POST(request) {
   let body;
   try {
@@ -15,7 +17,7 @@ export async function POST(request) {
     );
   }
 
-  const { sessionId, nodeId } = body ?? {};
+  const { sessionId, nodeId, instruction } = body ?? {};
   if (!UUID.test(sessionId) || !UUID.test(nodeId)) {
     return NextResponse.json(
       { error: "sessionId and nodeId must be UUIDs." },
@@ -23,8 +25,29 @@ export async function POST(request) {
     );
   }
 
+  if (instruction != null && typeof instruction !== "string") {
+    return NextResponse.json(
+      { error: "instruction must be a string." },
+      { status: 400 }
+    );
+  }
+
+  const direction = (instruction ?? "").trim();
+  if (direction.length > MAX_DIRECTION_LENGTH) {
+    return NextResponse.json(
+      {
+        error: `instruction must be at most ${MAX_DIRECTION_LENGTH} characters.`
+      },
+      { status: 400 }
+    );
+  }
+
   try {
-    const children = await expandNode(sessionId, nodeId);
+    const children = await expandNode(
+      sessionId,
+      nodeId,
+      direction
+    );
     return NextResponse.json(children, { status: 201 });
   } catch (err) {
     if (err instanceof ExpandError) {
