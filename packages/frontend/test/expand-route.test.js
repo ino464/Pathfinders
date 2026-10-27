@@ -61,7 +61,7 @@ describe("POST /api/expand", () => {
       nodes: [{ id: "c1" }],
       edges: [{ id: "e1" }]
     });
-    expect(fake.expand).toHaveBeenCalledWith(SESSION, NODE);
+    expect(fake.expand).toHaveBeenCalledWith(SESSION, NODE, "");
   });
 
   test("answers 400 when the body is not JSON", async () => {
@@ -122,13 +122,88 @@ describe("POST /api/expand", () => {
 });
 
 describe("POST /api/expand direction (#52)", () => {
-  test.todo(
-    "case 7: answers 400 for a direction that is a number, without expanding"
+  beforeEach(() => {
+    fake.expand = vi.fn(async () => ({ nodes: [], edges: [] }));
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test.each([
+    ["a number", 7],
+    ["an object", { text: "cheaper options" }],
+    ["an array", ["cheaper options"]],
+    ["a boolean", true],
+    [
+      "a string of 501 characters after trimming",
+      `  ${"a".repeat(501)}  `
+    ]
+  ])(
+    "case 7: answers 400 for a direction that is %s, without expanding",
+    async (_, instruction) => {
+      const response = await post({
+        sessionId: SESSION,
+        nodeId: NODE,
+        instruction
+      });
+
+      expect(response.status).toBe(400);
+      expect(fake.expand).not.toHaveBeenCalled();
+    }
   );
-  test.todo(
-    "case 7: answers 400 for a direction of 501 characters after trimming, without expanding"
+
+  test("rule 8: passes a direction of exactly 500 characters after trimming", async () => {
+    const direction = "a".repeat(500);
+
+    const response = await post({
+      sessionId: SESSION,
+      nodeId: NODE,
+      instruction: `   ${direction}   `
+    });
+
+    expect(response.status).toBe(201);
+    expect(fake.expand).toHaveBeenCalledWith(
+      SESSION,
+      NODE,
+      direction
+    );
+  });
+
+  test.each([
+    ["a missing", {}],
+    ["a null", { instruction: null }],
+    ["a blank", { instruction: "   " }]
+  ])(
+    "rule 9: passes an empty direction for %s instruction",
+    async (_, extra) => {
+      const response = await post({
+        sessionId: SESSION,
+        nodeId: NODE,
+        ...extra
+      });
+
+      expect(response.status).toBe(201);
+      expect(fake.expand).toHaveBeenCalledWith(
+        SESSION,
+        NODE,
+        ""
+      );
+    }
   );
-  test.todo(
-    "rule 9: passes an empty direction for a missing, null or blank instruction"
-  );
+
+  test("passes the trimmed direction to the expansion", async () => {
+    const response = await post({
+      sessionId: SESSION,
+      nodeId: NODE,
+      instruction: "  cheaper options  "
+    });
+
+    expect(response.status).toBe(201);
+    expect(fake.expand).toHaveBeenCalledWith(
+      SESSION,
+      NODE,
+      "cheaper options"
+    );
+  });
 });
