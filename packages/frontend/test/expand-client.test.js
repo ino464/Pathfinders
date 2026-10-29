@@ -34,7 +34,9 @@ describe("requestExpansion", () => {
   test("uses the server error message when expansion is rejected", async () => {
     vi.stubGlobal("fetch", async () => ({
       ok: false,
-      json: async () => ({ error: "The model did not answer in time." })
+      json: async () => ({
+        error: "The model did not answer in time."
+      })
     }));
 
     await expect(

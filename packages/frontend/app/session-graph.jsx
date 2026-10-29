@@ -105,10 +105,13 @@ export function SessionGraph({ graph, sessionId }) {
 
   return (
     <section aria-label="Session graph">
-      <div className="session-graph__selection" aria-live="polite">
+      <div
+        className="session-graph__selection"
+        aria-live="polite">
         {selectedNode ? (
           <p>
-            Selected idea: <strong>{selectedNode.data.content}</strong>
+            Selected idea:{" "}
+            <strong>{selectedNode.data.content}</strong>
           </p>
         ) : (
           <p>Select an idea to expand it.</p>
