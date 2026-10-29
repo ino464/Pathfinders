@@ -255,22 +255,22 @@ function findSubtree(liveIds, edges, nodeId) {
     edgesBetween(liveIds, edges)
   );
 
-  const doomed = new Set([nodeId]);
+  const toDelete = new Set([nodeId]);
   let changed = true;
   while (changed) {
     changed = false;
-    for (const id of doomed) {
+    for (const id of toDelete) {
       for (const child of childrenOf.get(id) ?? []) {
-        if (doomed.has(child)) continue;
+        if (toDelete.has(child)) continue;
         const parents = parentsOf.get(child);
-        if (parents.every((parent) => doomed.has(parent))) {
-          doomed.add(child);
+        if (parents.every((parent) => toDelete.has(parent))) {
+          toDelete.add(child);
           changed = true;
         }
       }
     }
   }
-  return [...doomed];
+  return [...toDelete];
 }
 
 export async function deleteSubtree(sessionId, nodeId) {
