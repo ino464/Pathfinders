@@ -1,4 +1,5 @@
 import "server-only";
+import { NODE_STATUSES } from "./node-status";
 import { createClient } from "./supabase-server";
 
 // The columns that toFlowNode reads.
@@ -232,8 +233,10 @@ export async function addEdge(sessionId, parentId, childId) {
 }
 
 export async function updateNodeStatus(nodeId, status) {
-  if (typeof status !== "string" || status.trim() === "") {
-    throw new Error("Status must be a non-empty string");
+  if (!NODE_STATUSES.includes(status)) {
+    throw new Error(
+      `Status must be one of ${NODE_STATUSES.join(", ")}`
+    );
   }
 
   const supabase = await createClient();
