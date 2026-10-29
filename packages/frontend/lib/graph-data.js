@@ -24,6 +24,12 @@ function toFlowEdge(edge) {
   };
 }
 
+// Returns the data of a Supabase result, or throws its error.
+function unwrap({ data, error }) {
+  if (error) throw error;
+  return data;
+}
+
 function addTo(map, key, value) {
   const values = map.get(key) ?? [];
   values.push(value);
@@ -53,35 +59,33 @@ function edgesBetween(liveIds, edges) {
 export async function createSession(rootContent, title = null) {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: userError
-  } = await supabase.auth.getUser();
-  if (userError) throw userError;
+  const { user } = unwrap(await supabase.auth.getUser());
   if (!user) throw new Error("Not signed in");
 
-  const { data: session, error: sessionError } = await supabase
-    .from("sessions")
-    .insert({ user_id: user.id, title })
-    .select()
-    .single();
-  if (sessionError) throw sessionError;
+  const session = unwrap(
+    await supabase
+      .from("sessions")
+      .insert({ user_id: user.id, title })
+      .select()
+      .single()
+  );
 
-  const { data: rootNode, error: nodeError } = await supabase
-    .from("nodes")
-    .insert({ session_id: session.id, content: rootContent })
-    .select()
-    .single();
-  if (nodeError) throw nodeError;
+  const rootNode = unwrap(
+    await supabase
+      .from("nodes")
+      .insert({ session_id: session.id, content: rootContent })
+      .select()
+      .single()
+  );
 
-  const { data: updatedSession, error: updateError } =
+  const updatedSession = unwrap(
     await supabase
       .from("sessions")
       .update({ root_node_id: rootNode.id })
       .eq("id", session.id)
       .select()
-      .single();
-  if (updateError) throw updateError;
+      .single()
+  );
 
   return { session: updatedSession, rootNode };
 }
@@ -89,7 +93,7 @@ export async function createSession(rootContent, title = null) {
 export async function getSessionGraph(sessionId) {
   const supabase = await createClient();
 
-  const [nodesResult, edgesResult] = await Promise.all([
+  const results = await Promise.all([
     supabase
       .from("nodes")
       .select(FLOW_NODE_COLUMNS)
@@ -100,16 +104,13 @@ export async function getSessionGraph(sessionId) {
       .select("id, parent_node_id, child_node_id")
       .eq("session_id", sessionId)
   ]);
-  if (nodesResult.error) throw nodesResult.error;
-  if (edgesResult.error) throw edgesResult.error;
+  const [nodes, edges] = results.map(unwrap);
 
-  const liveIds = new Set(
-    nodesResult.data.map((node) => node.id)
-  );
-  const liveEdges = edgesBetween(liveIds, edgesResult.data);
+  const liveIds = new Set(nodes.map((node) => node.id));
+  const liveEdges = edgesBetween(liveIds, edges);
 
   return {
-    nodes: nodesResult.data.map(toFlowNode),
+    nodes: nodes.map(toFlowNode),
     edges: liveEdges.map(toFlowEdge)
   };
 }
@@ -120,30 +121,23 @@ export async function getSessionGraph(sessionId) {
 export async function getExpansionInputs(sessionId) {
   const supabase = await createClient();
 
-  const [nodesResult, edgesResult, preferencesResult] =
-    await Promise.all([
-      supabase
-        .from("nodes")
-        .select("id, content, status, created_at, deleted_at")
-        .eq("session_id", sessionId),
-      supabase
-        .from("edges")
-        .select("parent_node_id, child_node_id")
-        .eq("session_id", sessionId),
-      supabase
-        .from("preferences")
-        .select("id, content, created_at")
-        .eq("session_id", sessionId)
-    ]);
-  if (nodesResult.error) throw nodesResult.error;
-  if (edgesResult.error) throw edgesResult.error;
-  if (preferencesResult.error) throw preferencesResult.error;
+  const results = await Promise.all([
+    supabase
+      .from("nodes")
+      .select("id, content, status, created_at, deleted_at")
+      .eq("session_id", sessionId),
+    supabase
+      .from("edges")
+      .select("parent_node_id, child_node_id")
+      .eq("session_id", sessionId),
+    supabase
+      .from("preferences")
+      .select("id, content, created_at")
+      .eq("session_id", sessionId)
+  ]);
+  const [nodes, edges, preferences] = results.map(unwrap);
 
-  return {
-    nodes: nodesResult.data,
-    edges: edgesResult.data,
-    preferences: preferencesResult.data
-  };
+  return { nodes, edges, preferences };
 }
 
 // Writes the children and their edges in one transaction
@@ -156,12 +150,13 @@ export async function addChildren(
 ) {
   const supabase = await createClient();
 
-  const { data, error } = await supabase.rpc("add_children", {
-    p_session_id: sessionId,
-    p_parent_node_id: parentId,
-    p_contents: contents
-  });
-  if (error) throw error;
+  const data = unwrap(
+    await supabase.rpc("add_children", {
+      p_session_id: sessionId,
+      p_parent_node_id: parentId,
+      p_contents: contents
+    })
+  );
 
   return {
     nodes: data.nodes.map(toFlowNode),
@@ -176,17 +171,18 @@ export async function addNode(
 ) {
   const supabase = await createClient();
 
-  const { data: node, error } = await supabase
-    .from("nodes")
-    .insert({
-      session_id: sessionId,
-      content,
-      position_x: position?.x ?? null,
-      position_y: position?.y ?? null
-    })
-    .select(FLOW_NODE_COLUMNS)
-    .single();
-  if (error) throw error;
+  const node = unwrap(
+    await supabase
+      .from("nodes")
+      .insert({
+        session_id: sessionId,
+        content,
+        position_x: position?.x ?? null,
+        position_y: position?.y ?? null
+      })
+      .select(FLOW_NODE_COLUMNS)
+      .single()
+  );
 
   return toFlowNode(node);
 }
@@ -209,26 +205,28 @@ function createsCycle(edges, parentId, childId) {
 export async function addEdge(sessionId, parentId, childId) {
   const supabase = await createClient();
 
-  const { data: edges, error: edgesError } = await supabase
-    .from("edges")
-    .select("parent_node_id, child_node_id")
-    .eq("session_id", sessionId);
-  if (edgesError) throw edgesError;
+  const edges = unwrap(
+    await supabase
+      .from("edges")
+      .select("parent_node_id, child_node_id")
+      .eq("session_id", sessionId)
+  );
 
   if (createsCycle(edges, parentId, childId)) {
     throw new Error("This edge would create a loop");
   }
 
-  const { data: edge, error } = await supabase
-    .from("edges")
-    .insert({
-      session_id: sessionId,
-      parent_node_id: parentId,
-      child_node_id: childId
-    })
-    .select("id, parent_node_id, child_node_id")
-    .single();
-  if (error) throw error;
+  const edge = unwrap(
+    await supabase
+      .from("edges")
+      .insert({
+        session_id: sessionId,
+        parent_node_id: parentId,
+        child_node_id: childId
+      })
+      .select("id, parent_node_id, child_node_id")
+      .single()
+  );
 
   return toFlowEdge(edge);
 }
@@ -240,13 +238,14 @@ export async function updateNodeStatus(nodeId, status) {
 
   const supabase = await createClient();
 
-  const { data: node, error } = await supabase
-    .from("nodes")
-    .update({ status })
-    .eq("id", nodeId)
-    .select(FLOW_NODE_COLUMNS)
-    .single();
-  if (error) throw error;
+  const node = unwrap(
+    await supabase
+      .from("nodes")
+      .update({ status })
+      .eq("id", nodeId)
+      .select(FLOW_NODE_COLUMNS)
+      .single()
+  );
 
   return toFlowNode(node);
 }
@@ -277,7 +276,7 @@ function findSubtree(liveIds, edges, nodeId) {
 export async function deleteSubtree(sessionId, nodeId) {
   const supabase = await createClient();
 
-  const [nodesResult, edgesResult] = await Promise.all([
+  const results = await Promise.all([
     supabase
       .from("nodes")
       .select("id")
@@ -288,23 +287,21 @@ export async function deleteSubtree(sessionId, nodeId) {
       .select("parent_node_id, child_node_id")
       .eq("session_id", sessionId)
   ]);
-  if (nodesResult.error) throw nodesResult.error;
-  if (edgesResult.error) throw edgesResult.error;
+  const [nodes, edges] = results.map(unwrap);
 
-  const liveIds = new Set(
-    nodesResult.data.map((node) => node.id)
-  );
+  const liveIds = new Set(nodes.map((node) => node.id));
   if (!liveIds.has(nodeId)) {
     throw new Error("Node not found in this session");
   }
 
-  const ids = findSubtree(liveIds, edgesResult.data, nodeId);
+  const ids = findSubtree(liveIds, edges, nodeId);
 
-  const { error } = await supabase
-    .from("nodes")
-    .update({ deleted_at: new Date().toISOString() })
-    .in("id", ids);
-  if (error) throw error;
+  unwrap(
+    await supabase
+      .from("nodes")
+      .update({ deleted_at: new Date().toISOString() })
+      .in("id", ids)
+  );
 
   return ids;
 }
