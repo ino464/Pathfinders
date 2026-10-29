@@ -15,7 +15,7 @@ export default async function Home() {
     <main>
       <h1>Pathfinders</h1>
       {session ? (
-        <SessionGraph graph={graph} />
+        <SessionGraph graph={graph} sessionId={session.id} />
       ) : (
         <p role="status">
           No brainstorming session yet. Create one to start

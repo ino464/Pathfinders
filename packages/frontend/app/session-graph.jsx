@@ -12,6 +12,7 @@ import {
   useNodesState
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { requestExpansion } from "../lib/expand-client";
 import { layoutGraph } from "../lib/graph-layout";
 
 //node positions are computed by layoutGraph on every load, and
@@ -41,7 +42,7 @@ function SessionNode({ data, selected }) {
 
 const nodeTypes = { session: SessionNode };
 
-export function SessionGraph({ graph }) {
+export function SessionGraph({ graph, sessionId }) {
   const canvasGraph = useMemo(
     () => toCanvasGraph(graph),
     [graph]
@@ -49,10 +50,12 @@ export function SessionGraph({ graph }) {
   const [nodes, setNodes, onNodesChange] = useNodesState(
     canvasGraph.nodes
   );
-  const [edges, , onEdgesChange] = useEdgesState(
+  const [edges, setEdges, onEdgesChange] = useEdgesState(
     canvasGraph.edges
   );
   const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const [isExpanding, setIsExpanding] = useState(false);
+  const [error, setError] = useState(null);
   const selectedNode = nodes.find(
     (node) => node.id === selectedNodeId
   );
@@ -77,6 +80,29 @@ export function SessionGraph({ graph }) {
     );
   }, [setNodes]);
 
+  async function expandSelectedNode() {
+    if (!selectedNode || isExpanding) return;
+
+    setIsExpanding(true);
+    setError(null);
+    try {
+      const expansion = await requestExpansion(
+        sessionId,
+        selectedNode.id
+      );
+      const nextGraph = toCanvasGraph({
+        nodes: [...nodes, ...expansion.nodes],
+        edges: [...edges, ...expansion.edges]
+      });
+      setNodes(nextGraph.nodes);
+      setEdges(nextGraph.edges);
+    } catch (err) {
+      setError(err.message ?? "The expansion failed.");
+    } finally {
+      setIsExpanding(false);
+    }
+  }
+
   return (
     <section aria-label="Session graph">
       <div className="session-graph__selection" aria-live="polite">
@@ -87,6 +113,13 @@ export function SessionGraph({ graph }) {
         ) : (
           <p>Select an idea to expand it.</p>
         )}
+        <button
+          type="button"
+          onClick={expandSelectedNode}
+          disabled={!selectedNode || isExpanding}>
+          {isExpanding ? "Expanding…" : "Expand"}
+        </button>
+        {error && <p role="alert">{error}</p>}
       </div>
       <div className="session-graph">
         <ReactFlow
