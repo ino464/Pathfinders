@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Background,
   Controls,
@@ -52,9 +52,14 @@ export function SessionGraph({ graph }) {
   const [edges, , onEdgesChange] = useEdgesState(
     canvasGraph.edges
   );
+  const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const selectedNode = nodes.find(
+    (node) => node.id === selectedNodeId
+  );
 
   const selectNode = useCallback(
     (_, selectedNode) => {
+      setSelectedNodeId(selectedNode.id);
       setNodes((currentNodes) =>
         currentNodes.map((node) => ({
           ...node,
@@ -66,31 +71,41 @@ export function SessionGraph({ graph }) {
   );
 
   const clearSelection = useCallback(() => {
+    setSelectedNodeId(null);
     setNodes((currentNodes) =>
       currentNodes.map((node) => ({ ...node, selected: false }))
     );
   }, [setNodes]);
 
   return (
-    <section
-      className="session-graph"
-      aria-label="Session graph">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodeClick={selectNode}
-        onPaneClick={clearSelection}
-        fitView
-        fitViewOptions={{ padding: 0.25 }}
-        minZoom={0.3}
-        maxZoom={1.75}>
-        <Background gap={18} size={1} />
-        <Controls />
-        <MiniMap zoomable pannable />
-      </ReactFlow>
+    <section aria-label="Session graph">
+      <div className="session-graph__selection" aria-live="polite">
+        {selectedNode ? (
+          <p>
+            Selected idea: <strong>{selectedNode.data.content}</strong>
+          </p>
+        ) : (
+          <p>Select an idea to expand it.</p>
+        )}
+      </div>
+      <div className="session-graph">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeClick={selectNode}
+          onPaneClick={clearSelection}
+          fitView
+          fitViewOptions={{ padding: 0.25 }}
+          minZoom={0.3}
+          maxZoom={1.75}>
+          <Background gap={18} size={1} />
+          <Controls />
+          <MiniMap zoomable pannable />
+        </ReactFlow>
+      </div>
     </section>
   );
 }
