@@ -20,6 +20,32 @@ function toFlowEdge(edge) {
   };
 }
 
+function addTo(map, key, value) {
+  const values = map.get(key) ?? [];
+  values.push(value);
+  map.set(key, values);
+}
+
+// Maps each node id to the ids of its parents and children.
+function buildEdgeLookups(edges) {
+  const parentsOf = new Map();
+  const childrenOf = new Map();
+  for (const edge of edges) {
+    addTo(parentsOf, edge.child_node_id, edge.parent_node_id);
+    addTo(childrenOf, edge.parent_node_id, edge.child_node_id);
+  }
+  return { parentsOf, childrenOf };
+}
+
+// Keeps only the edges whose parent and child are both live.
+function edgesBetween(liveIds, edges) {
+  return edges.filter(
+    (edge) =>
+      liveIds.has(edge.parent_node_id) &&
+      liveIds.has(edge.child_node_id)
+  );
+}
+
 export async function createSession(rootContent, title = null) {
   const supabase = await createClient();
 
@@ -76,11 +102,7 @@ export async function getSessionGraph(sessionId) {
   const liveIds = new Set(
     nodesResult.data.map((node) => node.id)
   );
-  const liveEdges = edgesResult.data.filter(
-    (edge) =>
-      liveIds.has(edge.parent_node_id) &&
-      liveIds.has(edge.child_node_id)
-  );
+  const liveEdges = edgesBetween(liveIds, edgesResult.data);
 
   return {
     nodes: nodesResult.data.map(toFlowNode),
@@ -166,12 +188,7 @@ export async function addNode(
 }
 
 function createsCycle(edges, parentId, childId) {
-  const parentsOf = new Map();
-  for (const edge of edges) {
-    const parents = parentsOf.get(edge.child_node_id) ?? [];
-    parents.push(edge.parent_node_id);
-    parentsOf.set(edge.child_node_id, parents);
-  }
+  const { parentsOf } = buildEdgeLookups(edges);
 
   const toVisit = [parentId];
   const visited = new Set();
@@ -231,18 +248,9 @@ export async function updateNodeStatus(nodeId, status) {
 }
 
 function findSubtree(liveIds, edges, nodeId) {
-  const parentsOf = new Map();
-  const childrenOf = new Map();
-  for (const edge of edges) {
-    if (!liveIds.has(edge.parent_node_id)) continue;
-    if (!liveIds.has(edge.child_node_id)) continue;
-    const parents = parentsOf.get(edge.child_node_id) ?? [];
-    parents.push(edge.parent_node_id);
-    parentsOf.set(edge.child_node_id, parents);
-    const children = childrenOf.get(edge.parent_node_id) ?? [];
-    children.push(edge.child_node_id);
-    childrenOf.set(edge.parent_node_id, children);
-  }
+  const { parentsOf, childrenOf } = buildEdgeLookups(
+    edgesBetween(liveIds, edges)
+  );
 
   const doomed = new Set([nodeId]);
   let changed = true;
