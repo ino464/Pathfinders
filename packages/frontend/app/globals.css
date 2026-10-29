@@ -27,6 +27,15 @@ h1 {
   border-radius: 8px;
 }
 
+.session-graph__selection {
+  min-height: 2.5rem;
+  margin-top: 1.5rem;
+}
+
+.session-graph__selection p {
+  margin: 0;
+}
+
 .session-node {
   width: 180px;
   padding: 0.75rem;
