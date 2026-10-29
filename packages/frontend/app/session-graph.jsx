@@ -12,90 +12,55 @@ import {
   useNodesState
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { layoutGraph } from "../lib/graph-layout";
 
-//hardcoded temporary graph info
+function fixtureNode(id, content) {
+  return {
+    id,
+    position: { x: 0, y: 0 },
+    data: { content, status: "pending" }
+  };
+}
+
+function fixtureEdge(source, target) {
+  return { id: `${source}-${target}`, source, target };
+}
+
+//hardcoded temporary graph info, in the shape getSessionGraph
+//returns, until the page loads a real session
 const SESSION_GRAPH_FIXTURE = {
   nodes: [
-    {
-      id: "question",
-      label: "How can I make my study plan sustainable?",
-      level: 0
-    },
-    {
-      id: "time",
-      label: "Protect focused study time",
-      level: 1
-    },
-    {
-      id: "energy",
-      label: "Plan around energy levels",
-      level: 1
-    },
-    {
-      id: "support",
-      label: "Build in accountability",
-      level: 1
-    },
-    {
-      id: "calendar",
-      label: "Block two 90-minute sessions",
-      level: 2
-    },
-    {
-      id: "tasks",
-      label: "Break assignments into next actions",
-      level: 2
-    },
-    {
-      id: "morning",
-      label: "Use mornings for harder work",
-      level: 2
-    },
-    {
-      id: "check-in",
-      label: "Schedule a weekly check-in",
-      level: 2
-    }
+    fixtureNode(
+      "question",
+      "How can I make my study plan sustainable?"
+    ),
+    fixtureNode("time", "Protect focused study time"),
+    fixtureNode("energy", "Plan around energy levels"),
+    fixtureNode("support", "Build in accountability"),
+    fixtureNode("calendar", "Block two 90-minute sessions"),
+    fixtureNode("tasks", "Break assignments into next actions"),
+    fixtureNode("morning", "Use mornings for harder work"),
+    fixtureNode("check-in", "Schedule a weekly check-in")
   ],
   edges: [
-    ["question", "time"],
-    ["question", "energy"],
-    ["question", "support"],
-    ["time", "calendar"],
-    ["time", "tasks"],
-    ["energy", "morning"],
-    ["support", "check-in"]
+    fixtureEdge("question", "time"),
+    fixtureEdge("question", "energy"),
+    fixtureEdge("question", "support"),
+    fixtureEdge("time", "calendar"),
+    fixtureEdge("time", "tasks"),
+    fixtureEdge("energy", "morning"),
+    fixtureEdge("support", "check-in")
   ]
 };
 
-//now: node positions are calculated when the graph loads.
-// X/Y positions could be saved in the database later if users need to move nodes and keep their changes :)
-function layoutFixtureGraph({ nodes, edges }) {
-  const byLevel = new Map();
-  for (const node of nodes) {
-    const levelNodes = byLevel.get(node.level) ?? [];
-    levelNodes.push(node);
-    byLevel.set(node.level, levelNodes);
-  }
-
+//node positions are computed by layoutGraph on every load, and
+//the stored position columns are not used (#70)
+function toCanvasGraph(graph) {
+  const { nodes, edges } = layoutGraph(graph);
   return {
-    nodes: nodes.map((node) => {
-      const levelNodes = byLevel.get(node.level);
-      const row = levelNodes.findIndex(
-        ({ id }) => id === node.id
-      );
-
-      return {
-        ...node,
-        type: "session",
-        position: { x: node.level * 310, y: row * 155 },
-        data: { label: node.label }
-      };
-    }),
-    edges: edges.map(([source, target]) => ({
-      id: `${source}-${target}`,
-      source,
-      target,
+    nodes: nodes.map((node) => ({ ...node, type: "session" })),
+    edges: edges.map((edge) => ({
+      ...edge,
       type: "smoothstep",
       animated: false
     }))
@@ -107,7 +72,7 @@ function SessionNode({ data, selected }) {
     <div
       className={`session-node${selected ? " is-selected" : ""}`}>
       <Handle type="target" position={Position.Left} />
-      <span>{data.label}</span>
+      <span>{data.content}</span>
       <Handle type="source" position={Position.Right} />
     </div>
   );
@@ -115,15 +80,19 @@ function SessionNode({ data, selected }) {
 
 const nodeTypes = { session: SessionNode };
 
-export function SessionGraph() {
-  const graph = useMemo(
-    () => layoutFixtureGraph(SESSION_GRAPH_FIXTURE),
-    []
+export function SessionGraph({
+  graph = SESSION_GRAPH_FIXTURE
+}) {
+  const canvasGraph = useMemo(
+    () => toCanvasGraph(graph),
+    [graph]
   );
   const [nodes, setNodes, onNodesChange] = useNodesState(
-    graph.nodes
+    canvasGraph.nodes
   );
-  const [edges, , onEdgesChange] = useEdgesState(graph.edges);
+  const [edges, , onEdgesChange] = useEdgesState(
+    canvasGraph.edges
+  );
 
   const selectNode = useCallback(
     (_, selectedNode) => {
