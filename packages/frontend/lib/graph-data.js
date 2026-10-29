@@ -91,6 +91,22 @@ export async function createSession(rootContent, title = null) {
   return { session: updatedSession, rootNode };
 }
 
+// Returns the most recently updated live session the signed-in
+// user can access, or null when they have not started one yet.
+export async function getLatestSession() {
+  const supabase = await createClient();
+
+  return unwrap(
+    await supabase
+      .from("sessions")
+      .select("id, title, root_node_id")
+      .is("deleted_at", null)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+  );
+}
+
 export async function getSessionGraph(sessionId) {
   const supabase = await createClient();
 
