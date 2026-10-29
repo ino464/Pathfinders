@@ -78,7 +78,7 @@ classDiagram
 
     class NodeStatus {
         <<enumeration>>
-        NEUTRAL
+        PENDING
         ACCEPTED
         REJECTED
     }
@@ -151,7 +151,14 @@ necessary for anything where a user drags a node and expects it
 to stay where they put it, and leaving them nullable means a
 computed layout can ignore them at no cost, whereas adding them
 later would mean a migration and a backfill for every node
-already in the table.
+already in the table. Nothing writes them yet: the canvas
+computes the layout each time a graph loads (#70), as
+`docs/backend-architecture.md` describes.
+
+NodeStatus is stored in lowercase as `pending`, `accepted` or
+`rejected`, and a new node starts as `pending`. A check
+constraint and `updateNodeStatus` both refuse any other value
+(#70).
 
 Preferences are scoped to a session rather than to a user,
 because that is what US-08 asks for. Widening the scope later is
@@ -193,9 +200,6 @@ independently of the node it grows out of.
 
 ## Still open
 
-The position columns depend on what Jonah settles on in #33, so
-if the canvas ends up computing layout instead of storing it,
-this file needs a note saying as much. Additionally,
 deleteSubtree in #30 keeps a shared child as long as its other
 parent is still alive. The rule is written up in
 `docs/backend-architecture.md`.
