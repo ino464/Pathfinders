@@ -322,8 +322,8 @@ A size guard, if the project needs one, belongs to issue #32.
 ## Case 7: rejected ancestor
 
 Path: `R → A → B`. Target: `B`. `A` has the status that means
-"rejected". The status values are not settled. See open
-question 7.
+"rejected". The status values are `pending`, `accepted` and
+`rejected` (#70).
 
 Expected output: `A` stays in the context.
 
@@ -392,6 +392,10 @@ person before issue #31 can close.
    `ACCEPTED` and `REJECTED`. This file does not settle that.
    Case 7 does not need the answer, because the function does
    not read `status`.
+
+   **Answer (Tyler, #70):** The values are `pending`, `accepted`
+   and `rejected`, and `docs/UML.md` now names `PENDING`.
+
 8. **Ethan.** `docs/UML.md` shows `Preference.normalize()` and
    `Preference.toPromptFragment()`. Neither exists. The cases
    use preference `content` as stored. Is that correct?

@@ -549,10 +549,45 @@ describe("updateNodeStatus", () => {
   test("rejects an empty status without calling the database", async () => {
     fake.client = fakeClient();
     await expect(updateNodeStatus("n1", "  ")).rejects.toThrow(
-      "non-empty"
+      "Status must be one of pending, accepted, rejected"
     );
     expect(fake.client.calls).toHaveLength(0);
   });
+
+  test.each(["neutral", "ACCEPTED", " accepted", undefined])(
+    "rejects the status %j without calling the database",
+    async (status) => {
+      fake.client = fakeClient();
+      await expect(
+        updateNodeStatus("n1", status)
+      ).rejects.toThrow("Status must be one of");
+      expect(fake.client.calls).toHaveLength(0);
+    }
+  );
+
+  test.each(["pending", "accepted", "rejected"])(
+    "accepts the status %s",
+    async (status) => {
+      fake.client = fakeClient({
+        results: {
+          nodes: [
+            {
+              data: {
+                id: "n1",
+                content: "Idea",
+                status,
+                position_x: null,
+                position_y: null
+              },
+              error: null
+            }
+          ]
+        }
+      });
+      const node = await updateNodeStatus("n1", status);
+      expect(node.data.status).toBe(status);
+    }
+  );
 });
 
 describe("deleteSubtree", () => {

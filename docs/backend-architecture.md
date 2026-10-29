@@ -92,12 +92,29 @@ question in `docs/UML.md`.
 `addEdge` refuses an edge whose child is already an ancestor of
 its parent, so the graph never contains a loop.
 
+### Node status
+
+`nodes.status` is `pending`, `accepted` or `rejected`, and a new
+node starts as `pending`. A check constraint from the migration
+`20261028120000_constrain_node_status.sql` refuses any other
+value, and `updateNodeStatus` refuses it before it calls the
+database. The list is in `lib/node-status.js`, which does not
+import `server-only`, so the canvas can use it too.
+
 ### Session graph layout
 
-Node positions are currently calculated in the frontend when a
-graph loads. If users later need to move nodes and keep their
-layout, add `position_x` and `position_y` fields to the
-database.
+Node positions are computed each time a graph loads.
+`layoutGraph` in `lib/graph-layout.js` uses dagre to place the
+nodes from left to right, starting at the root. The browser
+measures a node only after it renders, so `layoutGraph`
+estimates each node's height from the length of its text.
+
+The `position_x` and `position_y` columns exist, but nothing
+writes them and the canvas ignores them. They stay for a later
+feature where a user drags a node and expects it to stay there.
+
+Tyler settled the status values and the computed layout on
+2026-10-28 in #70.
 
 ## Who enforces access
 
