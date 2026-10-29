@@ -10,6 +10,7 @@ vi.mock("../lib/supabase-server", () => ({
 
 const {
   createSession,
+  getLatestSession,
   getSessionGraph,
   getExpansionInputs,
   addChildren,
@@ -36,6 +37,9 @@ function fakeClient({
       "eq",
       "is",
       "in",
+      "order",
+      "limit",
+      "maybeSingle",
       "single"
     ]) {
       builder[op] = (...args) => {
@@ -133,6 +137,39 @@ describe("createSession", () => {
       results: { sessions: [{ data: null, error: failure }] }
     });
     await expect(createSession("Root")).rejects.toBe(failure);
+  });
+});
+
+describe("getLatestSession", () => {
+  test("returns the most recently updated live session", async () => {
+    const session = {
+      id: "s2",
+      title: "Latest ideas",
+      root_node_id: "root-2"
+    };
+    fake.client = fakeClient({
+      results: { sessions: [{ data: session, error: null }] }
+    });
+
+    await expect(getLatestSession()).resolves.toEqual(session);
+
+    const [call] = fake.client.calls;
+    expect(call).toMatchObject({ table: "sessions" });
+    expect(call.ops).toEqual([
+      ["select", "id, title, root_node_id"],
+      ["is", "deleted_at", null],
+      ["order", "updated_at", { ascending: false }],
+      ["limit", 1],
+      ["maybeSingle"]
+    ]);
+  });
+
+  test("returns null when the user has no sessions", async () => {
+    fake.client = fakeClient({
+      results: { sessions: [{ data: null, error: null }] }
+    });
+
+    await expect(getLatestSession()).resolves.toBeNull();
   });
 });
 
