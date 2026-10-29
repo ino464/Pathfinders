@@ -1,6 +1,10 @@
 import "server-only";
 import { createClient } from "./supabase-server";
 
+// The columns that toFlowNode reads.
+const FLOW_NODE_COLUMNS =
+  "id, content, status, position_x, position_y";
+
 function toFlowNode(node) {
   return {
     id: node.id,
@@ -88,7 +92,7 @@ export async function getSessionGraph(sessionId) {
   const [nodesResult, edgesResult] = await Promise.all([
     supabase
       .from("nodes")
-      .select("id, content, status, position_x, position_y")
+      .select(FLOW_NODE_COLUMNS)
       .eq("session_id", sessionId)
       .is("deleted_at", null),
     supabase
@@ -180,7 +184,7 @@ export async function addNode(
       position_x: position?.x ?? null,
       position_y: position?.y ?? null
     })
-    .select("id, content, status, position_x, position_y")
+    .select(FLOW_NODE_COLUMNS)
     .single();
   if (error) throw error;
 
@@ -240,7 +244,7 @@ export async function updateNodeStatus(nodeId, status) {
     .from("nodes")
     .update({ status })
     .eq("id", nodeId)
-    .select("id, content, status, position_x, position_y")
+    .select(FLOW_NODE_COLUMNS)
     .single();
   if (error) throw error;
 
