@@ -165,6 +165,24 @@ export async function getSessionGraph(sessionId) {
   };
 }
 
+// Soft-deletes a session: the row stays with deleted_at set
+// and drops out of listSessions. Returns the session's id.
+export async function deleteSession(sessionId) {
+  const supabase = await createClient();
+
+  const session = unwrap(
+    await supabase
+      .from("sessions")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", sessionId)
+      .is("deleted_at", null)
+      .select("id")
+      .single()
+  );
+
+  return session.id;
+}
+
 // Raw rows for context assembly, which needs created_at and
 // deleted_at. Deleted nodes and their edges are included on
 // purpose: context assembly decides how to treat them.
