@@ -120,6 +120,26 @@ export async function listSessions() {
   );
 }
 
+// Renames a session and returns the updated row. Throws when
+// the title is blank or when no session of the user's matches.
+export async function renameSession(sessionId, title) {
+  if (typeof title !== "string" || title.trim() === "") {
+    throw new Error("Title must be a non-empty string");
+  }
+
+  const supabase = await createClient();
+
+  return unwrap(
+    await supabase
+      .from("sessions")
+      .update({ title: title.trim() })
+      .eq("id", sessionId)
+      .select("id, title, root_node_id, created_at")
+      .single()
+  );
+}
+
+
 export async function getSessionGraph(sessionId) {
   const supabase = await createClient();
 
