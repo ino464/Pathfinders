@@ -236,7 +236,11 @@ describe("deleteSession", () => {
 describe("getSession", () => {
   // The query is limited to the id and to live sessions.
   test("returns the session", async () => {
-    const session = { id: "s1", title: "Ideas", root_node_id: "n1" };
+    const session = {
+      id: "s1",
+      title: "Ideas",
+      root_node_id: "n1"
+    };
     fake.client = fakeClient({
       results: { sessions: [{ data: session, error: null }] }
     });

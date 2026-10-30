@@ -11,7 +11,7 @@ import {
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// shows one session's canvas, or a 404 if it isn't yours  
+// shows one session's canvas, or a 404 if it isn't yours
 export default async function SessionPage({ params }) {
   const { id } = await params;
   if (!UUID.test(id)) notFound();
