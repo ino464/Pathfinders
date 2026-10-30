@@ -1,26 +1,28 @@
+import Link from "next/link";
 import { CurrentUser } from "./current-user";
-import { SessionGraph } from "./session-graph";
-import {
-  getLatestSession,
-  getSessionGraph
-} from "../lib/graph-data";
+import { listSessions } from "../lib/graph-data";
 
 export default async function Home() {
-  const session = await getLatestSession();
-  const graph = session
-    ? await getSessionGraph(session.id)
-    : { nodes: [], edges: [] };
+  const sessions = await listSessions();
 
   return (
     <main>
       <h1>Pathfinders</h1>
-      {session ? (
-        <SessionGraph graph={graph} sessionId={session.id} />
-      ) : (
+       {sessions.length === 0 ? (
         <p role="status">
           No brainstorming session yet. Create one to start
           expanding ideas.
         </p>
+      ) : (
+        <ul>
+          {sessions.map((session) => (
+            <li key={session.id}>
+              <Link href={`/sessions/${session.id}`}>
+                {session.title ?? "Untitled session"}
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
       <CurrentUser />
     </main>
