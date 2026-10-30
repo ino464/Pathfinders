@@ -13,6 +13,7 @@ const {
   listSessions,
   renameSession,
   deleteSession,
+  getSession,
   getLatestSession,
   getSessionGraph,
   getExpansionInputs,
@@ -227,6 +228,36 @@ describe("deleteSession", () => {
     });
 
     await expect(deleteSession("s1")).rejects.toBe(failure);
+  });
+});
+
+// getSession loads one live session by id, or null when none
+// matches (missing, deleted, or someone else's).
+describe("getSession", () => {
+  // The query is limited to the id and to live sessions.
+  test("returns the session", async () => {
+    const session = { id: "s1", title: "Ideas", root_node_id: "n1" };
+    fake.client = fakeClient({
+      results: { sessions: [{ data: session, error: null }] }
+    });
+
+    await expect(getSession("s1")).resolves.toEqual(session);
+
+    expect(fake.client.calls[0].ops).toEqual([
+      ["select", "id, title, root_node_id"],
+      ["eq", "id", "s1"],
+      ["is", "deleted_at", null],
+      ["maybeSingle"]
+    ]);
+  });
+
+  // No matching row is not an error: the page shows not-found.
+  test("returns null when there is no such session", async () => {
+    fake.client = fakeClient({
+      results: { sessions: [{ data: null, error: null }] }
+    });
+
+    await expect(getSession("s9")).resolves.toBeNull();
   });
 });
 

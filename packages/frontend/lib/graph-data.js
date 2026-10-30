@@ -119,6 +119,19 @@ export async function listSessions() {
       .order("created_at", { ascending: false })
   );
 }
+// Returns one live session of the signed-in user, or null.
+export async function getSession(sessionId) {
+  const supabase = await createClient();
+
+  return unwrap(
+    await supabase
+      .from("sessions")
+      .select("id, title, root_node_id")
+      .eq("id", sessionId)
+      .is("deleted_at", null)
+      .maybeSingle()
+  );
+}
 
 // Renames a session and returns the updated row. Throws when
 // the title is blank or when no session of the user's matches.
