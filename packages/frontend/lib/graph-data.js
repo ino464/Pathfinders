@@ -120,7 +120,6 @@ export async function listSessions() {
   );
 }
 
-
 export async function getSessionGraph(sessionId) {
   const supabase = await createClient();
 

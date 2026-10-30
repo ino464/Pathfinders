@@ -167,27 +167,26 @@ describe("getLatestSession", () => {
 
   // Checks the query, live sessions only and newest first
   describe("listSessions", () => {
-  test("returns live sessions, newest first", async () => {
-    const sessions = [
-      { id: "s2", title: "Newer", root_node_id: "n2" },
-      { id: "s1", title: "Older", root_node_id: "n1" }
-    ];
-    fake.client = fakeClient({
-      results: { sessions: [{ data: sessions, error: null }] }
+    test("returns live sessions, newest first", async () => {
+      const sessions = [
+        { id: "s2", title: "Newer", root_node_id: "n2" },
+        { id: "s1", title: "Older", root_node_id: "n1" }
+      ];
+      fake.client = fakeClient({
+        results: { sessions: [{ data: sessions, error: null }] }
+      });
+
+      await expect(listSessions()).resolves.toEqual(sessions);
+
+      const [call] = fake.client.calls;
+      expect(call).toMatchObject({ table: "sessions" });
+      expect(call.ops).toEqual([
+        ["select", "id, title, root_node_id, created_at"],
+        ["is", "deleted_at", null],
+        ["order", "created_at", { ascending: false }]
+      ]);
     });
-
-    await expect(listSessions()).resolves.toEqual(sessions);
-
-    const [call] = fake.client.calls;
-    expect(call).toMatchObject({ table: "sessions" });
-    expect(call.ops).toEqual([
-      ["select", "id, title, root_node_id, created_at"],
-      ["is", "deleted_at", null],
-      ["order", "created_at", { ascending: false }]
-    ]);
   });
-});
-
 
   test("returns null when the user has no sessions", async () => {
     fake.client = fakeClient({
