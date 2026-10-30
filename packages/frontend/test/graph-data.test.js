@@ -11,6 +11,7 @@ vi.mock("../lib/supabase-server", () => ({
 const {
   createSession,
   listSessions,
+  renameSession,
   getLatestSession,
   getSessionGraph,
   getExpansionInputs,
@@ -196,6 +197,56 @@ describe("listSessions", () => {
     ]);
   });
 });
+
+// renameSession trims the title, refuses blank titles before
+// touching the database, and surfaces Supabase errors.
+describe("renameSession", () => {
+  // The saved title has no leading or trailing spaces.
+  test("trims the title and returns the updated session", async () => {
+    const updated = {
+      id: "s1",
+      title: "Study plan",
+      root_node_id: "n1",
+      created_at: "2026-10-30T00:00:00Z"
+    };
+    fake.client = fakeClient({
+      results: { sessions: [{ data: updated, error: null }] }
+    });
+
+    await expect(
+      renameSession("s1", "  Study plan  ")
+    ).resolves.toEqual(updated);
+
+    expect(fake.client.calls[0].ops.slice(0, 2)).toEqual([
+      ["update", { title: "Study plan" }],
+      ["eq", "id", "s1"]
+    ]);
+  });
+
+  // A blank or missing title is rejected with no query made
+  test.each(["", "   ", undefined])(
+    "rejects the title %j without calling the database",
+    async (title) => {
+      fake.client = fakeClient();
+
+      await expect(renameSession("s1", title)).rejects.toThrow(
+        "Title must be a non-empty string"
+      );
+      expect(fake.client.calls).toHaveLength(0);
+    }
+  );
+
+  // A failed update, such as no matching row, is rethrown
+  test("throws the Supabase error when the update fails", async () => {
+    const failure = new Error("no rows");
+    fake.client = fakeClient({
+      results: { sessions: [{ data: null, error: failure }] }
+    });
+
+    await expect(renameSession("s1", "New")).rejects.toBe(failure);
+  });
+});
+
 
 describe("getSessionGraph", () => {
   test("returns live nodes and edges in React Flow shape", async () => {
