@@ -10,6 +10,10 @@ vi.mock("../lib/supabase-server", () => ({
 
 const {
   createSession,
+  listSessions,
+  renameSession,
+  deleteSession,
+  getSession,
   getLatestSession,
   getSessionGraph,
   getExpansionInputs,
@@ -170,6 +174,145 @@ describe("getLatestSession", () => {
     });
 
     await expect(getLatestSession()).resolves.toBeNull();
+  });
+});
+
+// Checks the query, live sessions only and newest first
+describe("listSessions", () => {
+  test("returns live sessions, newest first", async () => {
+    const sessions = [
+      { id: "s2", title: "Newer", root_node_id: "n2" },
+      { id: "s1", title: "Older", root_node_id: "n1" }
+    ];
+    fake.client = fakeClient({
+      results: { sessions: [{ data: sessions, error: null }] }
+    });
+
+    await expect(listSessions()).resolves.toEqual(sessions);
+
+    const [call] = fake.client.calls;
+    expect(call).toMatchObject({ table: "sessions" });
+    expect(call.ops).toEqual([
+      ["select", "id, title, root_node_id, created_at"],
+      ["is", "deleted_at", null],
+      ["order", "created_at", { ascending: false }]
+    ]);
+  });
+});
+
+// deleteSession soft-deletes: it stamps deleted_at, never removes
+// the row, and only touches a session that is still live.
+describe("deleteSession", () => {
+  // The row is kept and marked deleted, then its id is returned.
+  test("marks the session deleted and returns its id", async () => {
+    fake.client = fakeClient({
+      results: {
+        sessions: [{ data: { id: "s1" }, error: null }]
+      }
+    });
+
+    await expect(deleteSession("s1")).resolves.toBe("s1");
+
+    expect(fake.client.calls[0].ops.slice(0, 3)).toEqual([
+      ["update", { deleted_at: expect.any(String) }],
+      ["eq", "id", "s1"],
+      ["is", "deleted_at", null]
+    ]);
+  });
+
+  // A failed update, such as no live match, is rethrown.
+  test("throws the Supabase error when the update fails", async () => {
+    const failure = new Error("no rows");
+    fake.client = fakeClient({
+      results: { sessions: [{ data: null, error: failure }] }
+    });
+
+    await expect(deleteSession("s1")).rejects.toBe(failure);
+  });
+});
+
+// getSession loads one live session by id, or null when none
+// matches (missing, deleted, or someone else's).
+describe("getSession", () => {
+  // The query is limited to the id and to live sessions.
+  test("returns the session", async () => {
+    const session = {
+      id: "s1",
+      title: "Ideas",
+      root_node_id: "n1"
+    };
+    fake.client = fakeClient({
+      results: { sessions: [{ data: session, error: null }] }
+    });
+
+    await expect(getSession("s1")).resolves.toEqual(session);
+
+    expect(fake.client.calls[0].ops).toEqual([
+      ["select", "id, title, root_node_id"],
+      ["eq", "id", "s1"],
+      ["is", "deleted_at", null],
+      ["maybeSingle"]
+    ]);
+  });
+
+  // No matching row is not an error: the page shows not-found.
+  test("returns null when there is no such session", async () => {
+    fake.client = fakeClient({
+      results: { sessions: [{ data: null, error: null }] }
+    });
+
+    await expect(getSession("s9")).resolves.toBeNull();
+  });
+});
+
+// renameSession trims the title, refuses blank titles before
+// touching the database, and surfaces Supabase errors.
+describe("renameSession", () => {
+  // The saved title has no leading or trailing spaces.
+  test("trims the title and returns the updated session", async () => {
+    const updated = {
+      id: "s1",
+      title: "Study plan",
+      root_node_id: "n1",
+      created_at: "2026-10-30T00:00:00Z"
+    };
+    fake.client = fakeClient({
+      results: { sessions: [{ data: updated, error: null }] }
+    });
+
+    await expect(
+      renameSession("s1", "  Study plan  ")
+    ).resolves.toEqual(updated);
+
+    expect(fake.client.calls[0].ops.slice(0, 2)).toEqual([
+      ["update", { title: "Study plan" }],
+      ["eq", "id", "s1"]
+    ]);
+  });
+
+  // A blank or missing title is rejected with no query made
+  test.each(["", "   ", undefined])(
+    "rejects the title %j without calling the database",
+    async (title) => {
+      fake.client = fakeClient();
+
+      await expect(renameSession("s1", title)).rejects.toThrow(
+        "Title must be a non-empty string"
+      );
+      expect(fake.client.calls).toHaveLength(0);
+    }
+  );
+
+  // A failed update, such as no matching row, is rethrown
+  test("throws the Supabase error when the update fails", async () => {
+    const failure = new Error("no rows");
+    fake.client = fakeClient({
+      results: { sessions: [{ data: null, error: failure }] }
+    });
+
+    await expect(renameSession("s1", "New")).rejects.toBe(
+      failure
+    );
   });
 });
 

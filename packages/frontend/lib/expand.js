@@ -2,7 +2,7 @@ import { assembleContext } from "./context-assembly";
 import { addChildren, getExpansionInputs } from "./graph-data";
 import { requestCompletion } from "./groq";
 
-export const MODEL = "llama-3.3-70b-versatile";
+export const MODEL = "openai/gpt-oss-120b";
 export const CHILD_COUNT = 3;
 export const TIMEOUT_MS = 15_000;
 export const RATE_LIMIT_EXPANSIONS = 10;

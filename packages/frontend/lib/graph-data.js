@@ -107,6 +107,51 @@ export async function getLatestSession() {
   );
 }
 
+// Returns the signed-in user's live sessions, newest first.
+export async function listSessions() {
+  const supabase = await createClient();
+
+  return unwrap(
+    await supabase
+      .from("sessions")
+      .select("id, title, root_node_id, created_at")
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+  );
+}
+// Returns one live session of the signed-in user, or null.
+export async function getSession(sessionId) {
+  const supabase = await createClient();
+
+  return unwrap(
+    await supabase
+      .from("sessions")
+      .select("id, title, root_node_id")
+      .eq("id", sessionId)
+      .is("deleted_at", null)
+      .maybeSingle()
+  );
+}
+
+// Renames a session and returns the updated row. Throws when
+// the title is blank or when no session of the user's matches.
+export async function renameSession(sessionId, title) {
+  if (typeof title !== "string" || title.trim() === "") {
+    throw new Error("Title must be a non-empty string");
+  }
+
+  const supabase = await createClient();
+
+  return unwrap(
+    await supabase
+      .from("sessions")
+      .update({ title: title.trim() })
+      .eq("id", sessionId)
+      .select("id, title, root_node_id, created_at")
+      .single()
+  );
+}
+
 export async function getSessionGraph(sessionId) {
   const supabase = await createClient();
 
@@ -130,6 +175,24 @@ export async function getSessionGraph(sessionId) {
     nodes: nodes.map(toFlowNode),
     edges: liveEdges.map(toFlowEdge)
   };
+}
+
+// Soft-deletes a session: the row stays with deleted_at set
+// and drops out of listSessions. Returns the session's id.
+export async function deleteSession(sessionId) {
+  const supabase = await createClient();
+
+  const session = unwrap(
+    await supabase
+      .from("sessions")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", sessionId)
+      .is("deleted_at", null)
+      .select("id")
+      .single()
+  );
+
+  return session.id;
 }
 
 // Raw rows for context assembly, which needs created_at and
