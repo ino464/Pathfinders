@@ -12,6 +12,7 @@ const {
   createSession,
   listSessions,
   renameSession,
+  deleteSession,
   getLatestSession,
   getSessionGraph,
   getExpansionInputs,
@@ -195,6 +196,35 @@ describe("listSessions", () => {
       ["is", "deleted_at", null],
       ["order", "created_at", { ascending: false }]
     ]);
+  });
+});
+
+// deleteSession soft-deletes: it stamps deleted_at, never removes
+// the row, and only touches a session that is still live.
+describe("deleteSession", () => {
+  // The row is kept and marked deleted, then its id is returned.
+  test("marks the session deleted and returns its id", async () => {
+    fake.client = fakeClient({
+      results: { sessions: [{ data: { id: "s1" }, error: null }] }
+    });
+
+    await expect(deleteSession("s1")).resolves.toBe("s1");
+
+    expect(fake.client.calls[0].ops.slice(0, 3)).toEqual([
+      ["update", { deleted_at: expect.any(String) }],
+      ["eq", "id", "s1"],
+      ["is", "deleted_at", null]
+    ]);
+  });
+
+  // A failed update, such as no live match, is rethrown.
+  test("throws the Supabase error when the update fails", async () => {
+    const failure = new Error("no rows");
+    fake.client = fakeClient({
+      results: { sessions: [{ data: null, error: failure }] }
+    });
+
+    await expect(deleteSession("s1")).rejects.toBe(failure);
   });
 });
 
