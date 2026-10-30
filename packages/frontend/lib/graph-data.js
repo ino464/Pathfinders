@@ -139,7 +139,6 @@ export async function renameSession(sessionId, title) {
   );
 }
 
-
 export async function getSessionGraph(sessionId) {
   const supabase = await createClient();
 

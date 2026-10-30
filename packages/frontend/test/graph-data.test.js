@@ -205,7 +205,9 @@ describe("deleteSession", () => {
   // The row is kept and marked deleted, then its id is returned.
   test("marks the session deleted and returns its id", async () => {
     fake.client = fakeClient({
-      results: { sessions: [{ data: { id: "s1" }, error: null }] }
+      results: {
+        sessions: [{ data: { id: "s1" }, error: null }]
+      }
     });
 
     await expect(deleteSession("s1")).resolves.toBe("s1");
@@ -273,10 +275,11 @@ describe("renameSession", () => {
       results: { sessions: [{ data: null, error: failure }] }
     });
 
-    await expect(renameSession("s1", "New")).rejects.toBe(failure);
+    await expect(renameSession("s1", "New")).rejects.toBe(
+      failure
+    );
   });
 });
-
 
 describe("getSessionGraph", () => {
   test("returns live nodes and edges in React Flow shape", async () => {
