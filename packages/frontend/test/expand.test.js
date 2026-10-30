@@ -468,8 +468,10 @@ describe("buildInstruction (#52)", () => {
       .split(/^### Part/m)
       .slice(1)
       .map((section) => {
-        const match = section.match(/```text\n([\s\S]*?)\n```/);
-        return match[1];
+        const match = section.match(
+          /```text\r?\n([\s\S]*?)\r?\n```/
+        );
+        return match[1].replace(/\r\n/g, "\n");
       });
 
     test("the doc has three part blocks", () => {
