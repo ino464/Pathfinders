@@ -107,6 +107,20 @@ export async function getLatestSession() {
   );
 }
 
+// Returns the signed-in user's live sessions, newest first.
+export async function listSessions() {
+  const supabase = await createClient();
+
+  return unwrap(
+    await supabase
+      .from("sessions")
+      .select("id, title, root_node_id, created_at")
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+  );
+}
+
+
 export async function getSessionGraph(sessionId) {
   const supabase = await createClient();
 
