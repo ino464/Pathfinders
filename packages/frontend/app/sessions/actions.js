@@ -2,10 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { 
-    createSession,
-    deleteSession,
-    renameSession
+import {
+  createSession,
+  deleteSession,
+  renameSession
 } from "../../lib/graph-data";
 
 const MAX_IDEA_LENGTH = 500;

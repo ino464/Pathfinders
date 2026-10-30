@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { CurrentUser } from "./current-user";
 import { listSessions } from "../lib/graph-data";
-import { 
+import {
   createSessionAction,
   deleteSessionAction,
   renameSessionAction
- } from "./sessions/actions";
+} from "./sessions/actions";
 
 export default async function Home() {
   const sessions = await listSessions();
