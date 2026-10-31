@@ -46,7 +46,8 @@ Authentication, Sign In / Providers in the hosted dashboard.
 
 A guest has no email or password, so if they lose their cookie
 they cannot get back in. For that reason guests get no sign out
-button. They get "Save your work to an account" on `/` instead.
+button. They get "Save your work to an account" on `/` and on
+`/account` instead.
 
 ## Email and password
 
@@ -103,6 +104,26 @@ that's `additional_redirect_urls` in `config.toml`, which covers
 `http://localhost:3000/**` and `http://127.0.0.1:3000/**`. For
 the hosted project, add the same addresses and the deployed site
 under Authentication, URL Configuration.
+
+## The account page
+
+`/account` (`packages/frontend/app/account/`) shows who is
+signed in and how. The home page and each session page link to
+it.
+
+- **Signed in as** shows the email, or "Guest".
+- **Sign-in methods** lists the providers in `user.identities`:
+  "Email and password", "Google", or both. A guest has no
+  identities, so the page says their work is saved only in this
+  browser.
+- An account gets **Sign out**. A guest gets "Save your work to
+  an account" instead, for the reason in the Guests section.
+
+A guest upgrades by signing in or creating an account through
+that button. There is no separate upgrade path: the app does not
+call `updateUser({ email })` or `linkIdentity` on the guest. The
+guest's sessions move to the account, as the next section
+describes.
 
 ## Moving a guest's work into an account
 
