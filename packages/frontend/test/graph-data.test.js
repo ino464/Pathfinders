@@ -21,7 +21,10 @@ const {
   addNode,
   addEdge,
   updateNodeStatus,
-  deleteSubtree
+  deleteSubtree,
+  listPreferences,
+  addPreference,
+  removePreference
 } = await import("../lib/graph-data");
 
 function fakeClient({
@@ -38,6 +41,7 @@ function fakeClient({
       "select",
       "insert",
       "update",
+      "delete",
       "eq",
       "is",
       "in",
@@ -868,5 +872,130 @@ describe("deleteSubtree", () => {
     await expect(
       deleteSubtree("s1", "missing")
     ).rejects.toThrow("not found");
+  });
+});
+
+describe("listPreferences", () => {
+  test("returns the session's preferences, oldest first", async () => {
+    const preferences = [
+      {
+        id: "p1",
+        content: "Keep it cheap",
+        created_at: "2026-01-01T00:00:01Z"
+      },
+      {
+        id: "p2",
+        content: "No apps",
+        created_at: "2026-01-01T00:00:02Z"
+      }
+    ];
+    fake.client = fakeClient({
+      results: {
+        preferences: [{ data: preferences, error: null }]
+      }
+    });
+
+    await expect(listPreferences("s1")).resolves.toEqual(
+      preferences
+    );
+
+    expect(fake.client.calls[0].ops).toEqual([
+      ["select", "id, content, created_at"],
+      ["eq", "session_id", "s1"],
+      ["order", "created_at", { ascending: true }],
+      ["order", "id", { ascending: true }]
+    ]);
+  });
+
+  test("throws the Supabase error when the read fails", async () => {
+    const failure = new Error("read failed");
+    fake.client = fakeClient({
+      results: { preferences: [{ data: null, error: failure }] }
+    });
+
+    await expect(listPreferences("s1")).rejects.toBe(failure);
+  });
+});
+
+describe("addPreference", () => {
+  test("trims the content and returns the new preference", async () => {
+    const preference = {
+      id: "p1",
+      content: "Keep it cheap",
+      created_at: "2026-01-01T00:00:01Z"
+    };
+    fake.client = fakeClient({
+      results: {
+        preferences: [{ data: preference, error: null }]
+      }
+    });
+
+    await expect(
+      addPreference("s1", "  Keep it cheap  ")
+    ).resolves.toEqual(preference);
+
+    expect(fake.client.calls[0].ops).toEqual([
+      [
+        "insert",
+        { session_id: "s1", content: "Keep it cheap" }
+      ],
+      ["select", "id, content, created_at"],
+      ["single"]
+    ]);
+  });
+
+  test.each(["", "   ", undefined])(
+    "rejects the content %j without calling the database",
+    async (content) => {
+      fake.client = fakeClient();
+
+      await expect(
+        addPreference("s1", content)
+      ).rejects.toThrow(
+        "Preference must be a non-empty string"
+      );
+      expect(fake.client.calls).toHaveLength(0);
+    }
+  );
+
+  test("throws the Supabase error when the insert fails", async () => {
+    const failure = new Error("insert failed");
+    fake.client = fakeClient({
+      results: { preferences: [{ data: null, error: failure }] }
+    });
+
+    await expect(addPreference("s1", "Cheap")).rejects.toBe(
+      failure
+    );
+  });
+});
+
+describe("removePreference", () => {
+  test("deletes the preference and returns its id", async () => {
+    fake.client = fakeClient({
+      results: {
+        preferences: [{ data: { id: "p1" }, error: null }]
+      }
+    });
+
+    await expect(removePreference("p1")).resolves.toBe("p1");
+
+    expect(fake.client.calls[0].ops).toEqual([
+      ["delete"],
+      ["eq", "id", "p1"],
+      ["select", "id"],
+      ["single"]
+    ]);
+  });
+
+  // No matching row, such as another user's preference, is an
+  // error from single().
+  test("throws the Supabase error when no preference matches", async () => {
+    const failure = new Error("no rows");
+    fake.client = fakeClient({
+      results: { preferences: [{ data: null, error: failure }] }
+    });
+
+    await expect(removePreference("p9")).rejects.toBe(failure);
   });
 });
