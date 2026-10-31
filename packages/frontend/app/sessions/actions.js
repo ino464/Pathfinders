@@ -3,20 +3,23 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
+  addPreference,
   createSession,
   deleteSession,
+  removePreference,
   renameSession
 } from "../../lib/graph-data";
 
 const MAX_IDEA_LENGTH = 500;
 const MAX_TITLE_LENGTH = 60;
+const MAX_PREFERENCE_LENGTH = 200;
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// the session id from a form, or null if it isn't a uuid
-function readSessionId(formData) {
-  const id = String(formData.get("id") ?? "");
+// a uuid field from a form, or null if it isn't a uuid
+function readUuid(formData, name) {
+  const id = String(formData.get(name) ?? "");
   return UUID.test(id) ? id : null;
 }
 
@@ -39,7 +42,7 @@ export async function createSessionAction(formData) {
 
 // renames a session and reloads the list
 export async function renameSessionAction(formData) {
-  const id = readSessionId(formData);
+  const id = readUuid(formData, "id");
   const title = String(formData.get("title") ?? "").trim();
   if (!id || title === "" || title.length > MAX_TITLE_LENGTH) {
     return;
@@ -51,9 +54,35 @@ export async function renameSessionAction(formData) {
 
 // soft deletes a session and reloads the list
 export async function deleteSessionAction(formData) {
-  const id = readSessionId(formData);
+  const id = readUuid(formData, "id");
   if (!id) return;
 
   await deleteSession(id);
   revalidatePath("/");
+}
+
+// adds a preference to a session and reloads its page
+export async function addPreferenceAction(formData) {
+  const sessionId = readUuid(formData, "sessionId");
+  const content = String(formData.get("content") ?? "").trim();
+  if (
+    !sessionId ||
+    content === "" ||
+    content.length > MAX_PREFERENCE_LENGTH
+  ) {
+    return;
+  }
+
+  await addPreference(sessionId, content);
+  revalidatePath(`/sessions/${sessionId}`);
+}
+
+// removes a preference from a session and reloads its page
+export async function removePreferenceAction(formData) {
+  const sessionId = readUuid(formData, "sessionId");
+  const id = readUuid(formData, "id");
+  if (!sessionId || !id) return;
+
+  await removePreference(id);
+  revalidatePath(`/sessions/${sessionId}`);
 }
