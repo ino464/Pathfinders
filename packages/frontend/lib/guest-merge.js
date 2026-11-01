@@ -51,6 +51,21 @@ function canMerge(guest, account) {
   return guest.is_anonymous && guest.id !== account.id;
 }
 
+async function moveSessions(admin, fromUserId, toUserId) {
+  const { data: moved, error } = await admin
+    .from("sessions")
+    .update({ user_id: toUserId })
+    .eq("user_id", fromUserId)
+    .select("id");
+  if (error) throw error;
+  return moved.length;
+}
+
+async function removeGuest(admin, guestId) {
+  const { error } = await admin.auth.admin.deleteUser(guestId);
+  if (error) throw error;
+}
+
 function notMerged() {
   return { merged: false, movedSessions: 0 };
 }
@@ -95,17 +110,13 @@ export async function finishGuestMerge() {
     return notMerged();
   }
 
-  const { data: moved, error: moveError } = await admin
-    .from("sessions")
-    .update({ user_id: account.id })
-    .eq("user_id", guest.id)
-    .select("id");
-  if (moveError) throw moveError;
+  const movedSessions = await moveSessions(
+    admin,
+    guest.id,
+    account.id
+  );
   forgetMergeToken(cookieStore);
+  await removeGuest(admin, guest.id);
 
-  const { error: deleteError } =
-    await admin.auth.admin.deleteUser(guest.id);
-  if (deleteError) throw deleteError;
-
-  return { merged: true, movedSessions: moved.length };
+  return { merged: true, movedSessions };
 }
