@@ -5,15 +5,74 @@ import { createClient } from "./supabase-server";
 import { createAdminClient } from "./supabase-admin";
 
 export const MERGE_COOKIE = "pf_merge_from";
+const MERGE_TOKEN_MAX_AGE_SECONDS = 60 * 60;
 
-export async function startGuestMerge() {
-  const supabase = await createClient();
+function rememberMergeToken(cookieStore, token) {
+  cookieStore.set(MERGE_COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: MERGE_TOKEN_MAX_AGE_SECONDS
+  });
+}
 
+function forgetMergeToken(cookieStore) {
+  cookieStore.delete(MERGE_COOKIE);
+}
+
+async function getSignedInUser(supabase) {
   const {
     data: { user },
     error
   } = await supabase.auth.getUser();
   if (error) throw error;
+  return user;
+}
+
+async function requireAccount() {
+  const supabase = await createClient();
+  const account = await getSignedInUser(supabase);
+  if (!account || account.is_anonymous) {
+    throw new Error("Sign in to an account before merging.");
+  }
+  return account;
+}
+
+async function findGuest(admin, token) {
+  const {
+    data: { user },
+    error
+  } = await admin.auth.getUser(token);
+  return error ? null : user;
+}
+
+function canMerge(guest, account) {
+  return guest.is_anonymous && guest.id !== account.id;
+}
+
+async function moveSessions(admin, fromUserId, toUserId) {
+  const { data: moved, error } = await admin
+    .from("sessions")
+    .update({ user_id: toUserId })
+    .eq("user_id", fromUserId)
+    .select("id");
+  if (error) throw error;
+  return moved.length;
+}
+
+async function removeGuest(admin, guestId) {
+  const { error } = await admin.auth.admin.deleteUser(guestId);
+  if (error) throw error;
+}
+
+function notMerged() {
+  return { merged: false, movedSessions: 0 };
+}
+
+export async function startGuestMerge() {
+  const supabase = await createClient();
+  const user = await getSignedInUser(supabase);
   if (!user?.is_anonymous) {
     throw new Error(
       "Only a guest can carry work into an account."
@@ -28,57 +87,36 @@ export async function startGuestMerge() {
   }
 
   const cookieStore = await cookies();
-  cookieStore.set(MERGE_COOKIE, session.access_token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 3600
-  });
+  rememberMergeToken(cookieStore, session.access_token);
 }
 
 export async function finishGuestMerge() {
   const cookieStore = await cookies();
   const guestToken = cookieStore.get(MERGE_COOKIE)?.value;
-  if (!guestToken) return { merged: false, movedSessions: 0 };
+  if (!guestToken) return notMerged();
 
-  const supabase = await createClient();
-  const {
-    data: { user: account },
-    error: accountError
-  } = await supabase.auth.getUser();
-  if (accountError) throw accountError;
-  if (!account || account.is_anonymous) {
-    throw new Error("Sign in to an account before merging.");
-  }
+  const account = await requireAccount();
 
   const admin = createAdminClient();
-  const {
-    data: { user: guest },
-    error: guestError
-  } = await admin.auth.getUser(guestToken);
-  if (guestError) {
-    cookieStore.delete(MERGE_COOKIE);
+  const guest = await findGuest(admin, guestToken);
+  if (!guest) {
+    forgetMergeToken(cookieStore);
     throw new Error(
       "The guest session expired before its work could be moved."
     );
   }
-  if (!guest.is_anonymous || guest.id === account.id) {
-    cookieStore.delete(MERGE_COOKIE);
-    return { merged: false, movedSessions: 0 };
+  if (!canMerge(guest, account)) {
+    forgetMergeToken(cookieStore);
+    return notMerged();
   }
 
-  const { data: moved, error: moveError } = await admin
-    .from("sessions")
-    .update({ user_id: account.id })
-    .eq("user_id", guest.id)
-    .select("id");
-  if (moveError) throw moveError;
-  cookieStore.delete(MERGE_COOKIE);
+  const movedSessions = await moveSessions(
+    admin,
+    guest.id,
+    account.id
+  );
+  forgetMergeToken(cookieStore);
+  await removeGuest(admin, guest.id);
 
-  const { error: deleteError } =
-    await admin.auth.admin.deleteUser(guest.id);
-  if (deleteError) throw deleteError;
-
-  return { merged: true, movedSessions: moved.length };
+  return { merged: true, movedSessions };
 }
