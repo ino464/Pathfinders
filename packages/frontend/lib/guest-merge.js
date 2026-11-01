@@ -39,6 +39,22 @@ async function requireAccount() {
   return account;
 }
 
+async function findGuest(admin, token) {
+  const {
+    data: { user },
+    error
+  } = await admin.auth.getUser(token);
+  return error ? null : user;
+}
+
+function canMerge(guest, account) {
+  return guest.is_anonymous && guest.id !== account.id;
+}
+
+function notMerged() {
+  return { merged: false, movedSessions: 0 };
+}
+
 export async function startGuestMerge() {
   const supabase = await createClient();
   const user = await getSignedInUser(supabase);
@@ -62,24 +78,21 @@ export async function startGuestMerge() {
 export async function finishGuestMerge() {
   const cookieStore = await cookies();
   const guestToken = cookieStore.get(MERGE_COOKIE)?.value;
-  if (!guestToken) return { merged: false, movedSessions: 0 };
+  if (!guestToken) return notMerged();
 
   const account = await requireAccount();
 
   const admin = createAdminClient();
-  const {
-    data: { user: guest },
-    error: guestError
-  } = await admin.auth.getUser(guestToken);
-  if (guestError) {
+  const guest = await findGuest(admin, guestToken);
+  if (!guest) {
     forgetMergeToken(cookieStore);
     throw new Error(
       "The guest session expired before its work could be moved."
     );
   }
-  if (!guest.is_anonymous || guest.id === account.id) {
+  if (!canMerge(guest, account)) {
     forgetMergeToken(cookieStore);
-    return { merged: false, movedSessions: 0 };
+    return notMerged();
   }
 
   const { data: moved, error: moveError } = await admin
