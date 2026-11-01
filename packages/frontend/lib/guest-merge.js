@@ -21,14 +21,27 @@ function forgetMergeToken(cookieStore) {
   cookieStore.delete(MERGE_COOKIE);
 }
 
-export async function startGuestMerge() {
-  const supabase = await createClient();
-
+async function getSignedInUser(supabase) {
   const {
     data: { user },
     error
   } = await supabase.auth.getUser();
   if (error) throw error;
+  return user;
+}
+
+async function requireAccount() {
+  const supabase = await createClient();
+  const account = await getSignedInUser(supabase);
+  if (!account || account.is_anonymous) {
+    throw new Error("Sign in to an account before merging.");
+  }
+  return account;
+}
+
+export async function startGuestMerge() {
+  const supabase = await createClient();
+  const user = await getSignedInUser(supabase);
   if (!user?.is_anonymous) {
     throw new Error(
       "Only a guest can carry work into an account."
@@ -51,15 +64,7 @@ export async function finishGuestMerge() {
   const guestToken = cookieStore.get(MERGE_COOKIE)?.value;
   if (!guestToken) return { merged: false, movedSessions: 0 };
 
-  const supabase = await createClient();
-  const {
-    data: { user: account },
-    error: accountError
-  } = await supabase.auth.getUser();
-  if (accountError) throw accountError;
-  if (!account || account.is_anonymous) {
-    throw new Error("Sign in to an account before merging.");
-  }
+  const account = await requireAccount();
 
   const admin = createAdminClient();
   const {
