@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const fake = vi.hoisted(() => ({
+  addManualChild: vi.fn(),
   updateNodeContent: vi.fn()
 }));
 
 vi.mock("../lib/graph-data", () => fake);
 
-const { editNodeAction } =
+const { addManualChildAction, editNodeAction } =
   await import("../app/sessions/[id]/node-actions");
 
 const SESSION_ID = "11111111-1111-1111-1111-111111111111";
@@ -44,5 +45,35 @@ describe("editNodeAction", () => {
     ).resolves.toBeNull();
 
     expect(fake.updateNodeContent).not.toHaveBeenCalled();
+  });
+});
+
+describe("addManualChildAction", () => {
+  test("trims text before adding a child", async () => {
+    fake.addManualChild.mockResolvedValue({
+      nodes: [{ id: "child" }],
+      edges: [{ id: "edge" }]
+    });
+
+    await expect(
+      addManualChildAction(SESSION_ID, NODE_ID, "  New child  ")
+    ).resolves.toEqual({
+      nodes: [{ id: "child" }],
+      edges: [{ id: "edge" }]
+    });
+
+    expect(fake.addManualChild).toHaveBeenCalledWith(
+      SESSION_ID,
+      NODE_ID,
+      "New child"
+    );
+  });
+
+  test("does not add blank text", async () => {
+    await expect(
+      addManualChildAction(SESSION_ID, NODE_ID, "  ")
+    ).resolves.toBeNull();
+
+    expect(fake.addManualChild).not.toHaveBeenCalled();
   });
 });

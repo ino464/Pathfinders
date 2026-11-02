@@ -1,6 +1,9 @@
 "use server";
 
-import { updateNodeContent } from "../../../lib/graph-data";
+import {
+  addManualChild,
+  updateNodeContent
+} from "../../../lib/graph-data";
 
 const MAX_NODE_CONTENT_LENGTH = 500;
 const UUID =
@@ -33,4 +36,21 @@ export async function editNodeAction(
   }
 
   return updateNodeContent(nodeId, content.trim());
+}
+
+// Adds one validated child to the selected parent node.
+export async function addManualChildAction(
+  sessionId,
+  parentId,
+  content
+) {
+  if (
+    !validNodeId(sessionId) ||
+    !validNodeId(parentId) ||
+    !validContent(content)
+  ) {
+    return null;
+  }
+
+  return addManualChild(sessionId, parentId, content.trim());
 }
