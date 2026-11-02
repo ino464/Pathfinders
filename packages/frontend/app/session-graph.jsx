@@ -73,6 +73,7 @@ export function SessionGraph({ graph, sessionId }) {
   const selectedNode = nodes.find(
     (node) => node.id === selectedNodeId
   );
+  const isBusy = isExpanding || isSaving;
 
   const selectNode = useCallback(
     (_, selectedNode) => {
@@ -101,7 +102,7 @@ export function SessionGraph({ graph, sessionId }) {
   }, [setNodes]);
 
   async function expandSelectedNode() {
-    if (!selectedNode || isExpanding) return;
+    if (!selectedNode || isBusy) return;
 
     setIsExpanding(true);
     setError(null);
@@ -134,7 +135,7 @@ export function SessionGraph({ graph, sessionId }) {
   }
 
   async function saveStatus(status) {
-    if (!selectedNode || isSaving) return;
+    if (!selectedNode || isBusy) return;
 
     setIsSaving(true);
     setError(null);
@@ -156,7 +157,7 @@ export function SessionGraph({ graph, sessionId }) {
 
   async function editSelectedNode(event) {
     event.preventDefault();
-    if (!selectedNode || isSaving) return;
+    if (!selectedNode || isBusy) return;
 
     setIsSaving(true);
     setError(null);
@@ -181,7 +182,7 @@ export function SessionGraph({ graph, sessionId }) {
 
   async function addManualChild(event) {
     event.preventDefault();
-    if (!selectedNode || isSaving) return;
+    if (!selectedNode || isBusy) return;
 
     setIsSaving(true);
     setError(null);
@@ -208,7 +209,7 @@ export function SessionGraph({ graph, sessionId }) {
   }
 
   async function pruneSelectedNode() {
-    if (!selectedNode || isSaving) return;
+    if (!selectedNode || isBusy) return;
     if (
       !window.confirm("Prune this idea and its descendants?")
     ) {
@@ -261,19 +262,19 @@ export function SessionGraph({ graph, sessionId }) {
         <button
           type="button"
           onClick={expandSelectedNode}
-          disabled={!selectedNode || isExpanding || isSaving}>
+          disabled={!selectedNode || isBusy}>
           {isExpanding ? "Expanding…" : "Expand"}
         </button>
         <button
           type="button"
           onClick={() => saveStatus("accepted")}
-          disabled={!selectedNode || isSaving}>
+          disabled={!selectedNode || isBusy}>
           Accept
         </button>
         <button
           type="button"
           onClick={() => saveStatus("rejected")}
-          disabled={!selectedNode || isSaving}>
+          disabled={!selectedNode || isBusy}>
           Reject
         </button>
         <form onSubmit={editSelectedNode}>
@@ -284,14 +285,14 @@ export function SessionGraph({ graph, sessionId }) {
               onChange={(event) =>
                 setNodeText(event.target.value)
               }
-              disabled={!selectedNode || isSaving}
+              disabled={!selectedNode || isBusy}
               maxLength={500}
               required
             />
           </label>
           <button
             type="submit"
-            disabled={!selectedNode || isSaving}>
+            disabled={!selectedNode || isBusy}>
             Save text
           </button>
         </form>
@@ -303,21 +304,21 @@ export function SessionGraph({ graph, sessionId }) {
               onChange={(event) =>
                 setChildText(event.target.value)
               }
-              disabled={!selectedNode || isSaving}
+              disabled={!selectedNode || isBusy}
               maxLength={500}
               required
             />
           </label>
           <button
             type="submit"
-            disabled={!selectedNode || isSaving}>
+            disabled={!selectedNode || isBusy}>
             Add child
           </button>
         </form>
         <button
           type="button"
           onClick={pruneSelectedNode}
-          disabled={!selectedNode || isSaving}>
+          disabled={!selectedNode || isBusy}>
           Prune branch
         </button>
         {error && <p role="alert">{error}</p>}
