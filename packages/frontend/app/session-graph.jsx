@@ -166,6 +166,12 @@ export function SessionGraph({ graph, sessionId }) {
           disabled={!selectedNode || isSaving}>
           Accept
         </button>
+        <button
+          type="button"
+          onClick={() => saveStatus("rejected")}
+          disabled={!selectedNode || isSaving}>
+          Reject
+        </button>
         {error && <p role="alert">{error}</p>}
       </div>
       <div className="session-graph">
