@@ -14,6 +14,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { requestExpansion } from "../lib/expand-client";
 import { layoutGraph } from "../lib/graph-layout";
+import { setNodeStatusAction } from "./sessions/[id]/node-actions";
 
 //node positions are computed by layoutGraph on every load, and
 //the stored position columns are not used (#70)
@@ -60,6 +61,7 @@ export function SessionGraph({ graph, sessionId }) {
   );
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [isExpanding, setIsExpanding] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
   const selectedNode = nodes.find(
     (node) => node.id === selectedNodeId
@@ -108,6 +110,37 @@ export function SessionGraph({ graph, sessionId }) {
     }
   }
 
+  function replaceNode(updatedNode) {
+    setNodes((currentNodes) =>
+      currentNodes.map((node) =>
+        node.id === updatedNode.id
+          ? { ...updatedNode, type: "session", selected: true }
+          : node
+      )
+    );
+  }
+
+  async function saveStatus(status) {
+    if (!selectedNode || isSaving) return;
+
+    setIsSaving(true);
+    setError(null);
+    try {
+      const node = await setNodeStatusAction(
+        sessionId,
+        selectedNode.id,
+        status
+      );
+      if (!node)
+        throw new Error("The status could not be saved.");
+      replaceNode(node);
+    } catch (err) {
+      setError(err.message ?? "The status could not be saved.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return (
     <section aria-label="Session graph">
       <div
@@ -124,8 +157,14 @@ export function SessionGraph({ graph, sessionId }) {
         <button
           type="button"
           onClick={expandSelectedNode}
-          disabled={!selectedNode || isExpanding}>
+          disabled={!selectedNode || isExpanding || isSaving}>
           {isExpanding ? "Expanding…" : "Expand"}
+        </button>
+        <button
+          type="button"
+          onClick={() => saveStatus("accepted")}
+          disabled={!selectedNode || isSaving}>
+          Accept
         </button>
         {error && <p role="alert">{error}</p>}
       </div>
