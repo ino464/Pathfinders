@@ -298,6 +298,16 @@ export async function addChildren(
   };
 }
 
+// Adds one user-written child through the same atomic function as
+// generated expansions.
+export async function addManualChild(
+  sessionId,
+  parentId,
+  content
+) {
+  return addChildren(sessionId, parentId, [content]);
+}
+
 export async function addNode(
   sessionId,
   content,

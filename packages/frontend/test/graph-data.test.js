@@ -18,6 +18,7 @@ const {
   getSessionGraph,
   getExpansionInputs,
   addChildren,
+  addManualChild,
   addNode,
   addEdge,
   updateNodeStatus,
@@ -520,6 +521,34 @@ describe("addChildren", () => {
     await expect(
       addChildren("s1", "p", ["Child"])
     ).rejects.toBe(failure);
+  });
+});
+
+describe("addManualChild", () => {
+  test("delegates one child to add_children", async () => {
+    fake.client = fakeClient({
+      results: {
+        rpc: [
+          {
+            data: { nodes: [], edges: [] },
+            error: null
+          }
+        ]
+      }
+    });
+
+    await addManualChild("s1", "p1", "Written child");
+
+    expect(fake.client.calls).toEqual([
+      {
+        rpc: "add_children",
+        args: {
+          p_session_id: "s1",
+          p_parent_node_id: "p1",
+          p_contents: ["Written child"]
+        }
+      }
+    ]);
   });
 });
 
