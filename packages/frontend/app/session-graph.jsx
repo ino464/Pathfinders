@@ -14,7 +14,10 @@ import {
 import "@xyflow/react/dist/style.css";
 import { requestExpansion } from "../lib/expand-client";
 import { layoutGraph } from "../lib/graph-layout";
-import { setNodeStatusAction } from "./sessions/[id]/node-actions";
+import {
+  editNodeAction,
+  setNodeStatusAction
+} from "./sessions/[id]/node-actions";
 
 //node positions are computed by layoutGraph on every load, and
 //the stored position columns are not used (#70)
@@ -62,6 +65,7 @@ export function SessionGraph({ graph, sessionId }) {
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [isExpanding, setIsExpanding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [nodeText, setNodeText] = useState("");
   const [error, setError] = useState(null);
   const selectedNode = nodes.find(
     (node) => node.id === selectedNodeId
@@ -70,6 +74,7 @@ export function SessionGraph({ graph, sessionId }) {
   const selectNode = useCallback(
     (_, selectedNode) => {
       setSelectedNodeId(selectedNode.id);
+      setNodeText(selectedNode.data.content);
       setNodes((currentNodes) =>
         currentNodes.map((node) => ({
           ...node,
@@ -82,6 +87,7 @@ export function SessionGraph({ graph, sessionId }) {
 
   const clearSelection = useCallback(() => {
     setSelectedNodeId(null);
+    setNodeText("");
     setNodes((currentNodes) =>
       currentNodes.map((node) => ({ ...node, selected: false }))
     );
@@ -141,6 +147,31 @@ export function SessionGraph({ graph, sessionId }) {
     }
   }
 
+  async function editSelectedNode(event) {
+    event.preventDefault();
+    if (!selectedNode || isSaving) return;
+
+    setIsSaving(true);
+    setError(null);
+    try {
+      const node = await editNodeAction(
+        sessionId,
+        selectedNode.id,
+        nodeText
+      );
+      if (!node)
+        throw new Error("The node text could not be saved.");
+      replaceNode(node);
+      setNodeText(node.data.content);
+    } catch (err) {
+      setError(
+        err.message ?? "The node text could not be saved."
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return (
     <section aria-label="Session graph">
       <div
@@ -172,6 +203,25 @@ export function SessionGraph({ graph, sessionId }) {
           disabled={!selectedNode || isSaving}>
           Reject
         </button>
+        <form onSubmit={editSelectedNode}>
+          <label>
+            Edit idea
+            <input
+              value={nodeText}
+              onChange={(event) =>
+                setNodeText(event.target.value)
+              }
+              disabled={!selectedNode || isSaving}
+              maxLength={500}
+              required
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={!selectedNode || isSaving}>
+            Save text
+          </button>
+        </form>
         {error && <p role="alert">{error}</p>}
       </div>
       <div className="session-graph">
