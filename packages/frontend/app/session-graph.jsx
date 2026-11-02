@@ -17,6 +17,7 @@ import { layoutGraph } from "../lib/graph-layout";
 import {
   addManualChildAction,
   editNodeAction,
+  pruneNodeAction,
   setNodeStatusAction
 } from "./sessions/[id]/node-actions";
 
@@ -202,6 +203,44 @@ export function SessionGraph({ graph, sessionId }) {
     }
   }
 
+  async function pruneSelectedNode() {
+    if (!selectedNode || isSaving) return;
+    if (
+      !window.confirm("Prune this idea and its descendants?")
+    ) {
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+    try {
+      const deletedIds = await pruneNodeAction(
+        sessionId,
+        selectedNode.id
+      );
+      if (!deletedIds)
+        throw new Error("The branch could not be pruned.");
+      const deleted = new Set(deletedIds);
+      setNodes((currentNodes) =>
+        currentNodes.filter((node) => !deleted.has(node.id))
+      );
+      setEdges((currentEdges) =>
+        currentEdges.filter(
+          (edge) =>
+            !deleted.has(edge.source) &&
+            !deleted.has(edge.target)
+        )
+      );
+      clearSelection();
+    } catch (err) {
+      setError(
+        err.message ?? "The branch could not be pruned."
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return (
     <section aria-label="Session graph">
       <div
@@ -271,6 +310,12 @@ export function SessionGraph({ graph, sessionId }) {
             Add child
           </button>
         </form>
+        <button
+          type="button"
+          onClick={pruneSelectedNode}
+          disabled={!selectedNode || isSaving}>
+          Prune branch
+        </button>
         {error && <p role="alert">{error}</p>}
       </div>
       <div className="session-graph">
