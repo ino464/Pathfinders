@@ -21,6 +21,7 @@ const {
   addNode,
   addEdge,
   updateNodeStatus,
+  updateNodeContent,
   deleteSubtree,
   listPreferences,
   addPreference,
@@ -772,6 +773,35 @@ describe("updateNodeStatus", () => {
       expect(node.data.status).toBe(status);
     }
   );
+});
+
+describe("updateNodeContent", () => {
+  test("updates the content and returns the node", async () => {
+    fake.client = fakeClient({
+      results: {
+        nodes: [
+          {
+            data: {
+              id: "n1",
+              content: "Edited idea",
+              status: "pending",
+              position_x: null,
+              position_y: null
+            },
+            error: null
+          }
+        ]
+      }
+    });
+
+    const node = await updateNodeContent("n1", "Edited idea");
+
+    expect(node.data.content).toBe("Edited idea");
+    expect(fake.client.calls[0].ops.slice(0, 2)).toEqual([
+      ["update", { content: "Edited idea" }],
+      ["eq", "id", "n1"]
+    ]);
+  });
 });
 
 describe("deleteSubtree", () => {

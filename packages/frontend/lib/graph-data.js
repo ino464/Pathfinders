@@ -386,6 +386,22 @@ export async function updateNodeStatus(nodeId, status) {
   return toFlowNode(node);
 }
 
+// Changes a node's visible text and returns the updated canvas node.
+export async function updateNodeContent(nodeId, content) {
+  const supabase = await createClient();
+
+  const node = unwrap(
+    await supabase
+      .from("nodes")
+      .update({ content })
+      .eq("id", nodeId)
+      .select(FLOW_NODE_COLUMNS)
+      .single()
+  );
+
+  return toFlowNode(node);
+}
+
 function findSubtree(liveIds, edges, nodeId) {
   const { parentsOf, childrenOf } = buildEdgeLookups(
     edgesBetween(liveIds, edges)
