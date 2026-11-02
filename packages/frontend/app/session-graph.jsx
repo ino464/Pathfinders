@@ -32,9 +32,14 @@ function toCanvasGraph(graph) {
 function SessionNode({ data, selected }) {
   return (
     <div
-      className={`session-node${selected ? " is-selected" : ""}`}>
+      className={`session-node session-node--${data.status}${selected ? " is-selected" : ""}`}>
       <Handle type="target" position={Position.Left} />
-      <span>{data.content}</span>
+      <span className="session-node__label">
+        {data.content}
+      </span>
+      <span className="session-node__detail">
+        {data.status}
+      </span>
       <Handle type="source" position={Position.Right} />
     </div>
   );
