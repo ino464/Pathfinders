@@ -82,6 +82,14 @@ describe("addManualChildAction", () => {
 
     expect(fake.addManualChild).not.toHaveBeenCalled();
   });
+
+  test("does not add text longer than 500 characters", async () => {
+    await expect(
+      addManualChildAction(SESSION_ID, NODE_ID, "a".repeat(501))
+    ).resolves.toBeNull();
+
+    expect(fake.addManualChild).not.toHaveBeenCalled();
+  });
 });
 
 describe("setNodeStatusAction", () => {
@@ -101,6 +109,14 @@ describe("setNodeStatusAction", () => {
   test("does not delegate an unknown status", async () => {
     await expect(
       setNodeStatusAction(SESSION_ID, NODE_ID, "neutral")
+    ).resolves.toBeNull();
+
+    expect(fake.updateNodeStatus).not.toHaveBeenCalled();
+  });
+
+  test("does not delegate an invalid session id", async () => {
+    await expect(
+      setNodeStatusAction("not-a-uuid", NODE_ID, "accepted")
     ).resolves.toBeNull();
 
     expect(fake.updateNodeStatus).not.toHaveBeenCalled();
