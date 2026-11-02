@@ -15,6 +15,7 @@ import "@xyflow/react/dist/style.css";
 import { requestExpansion } from "../lib/expand-client";
 import { layoutGraph } from "../lib/graph-layout";
 import {
+  addManualChildAction,
   editNodeAction,
   setNodeStatusAction
 } from "./sessions/[id]/node-actions";
@@ -66,6 +67,7 @@ export function SessionGraph({ graph, sessionId }) {
   const [isExpanding, setIsExpanding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [nodeText, setNodeText] = useState("");
+  const [childText, setChildText] = useState("");
   const [error, setError] = useState(null);
   const selectedNode = nodes.find(
     (node) => node.id === selectedNodeId
@@ -172,6 +174,34 @@ export function SessionGraph({ graph, sessionId }) {
     }
   }
 
+  async function addManualChild(event) {
+    event.preventDefault();
+    if (!selectedNode || isSaving) return;
+
+    setIsSaving(true);
+    setError(null);
+    try {
+      const addition = await addManualChildAction(
+        sessionId,
+        selectedNode.id,
+        childText
+      );
+      if (!addition)
+        throw new Error("The child could not be added.");
+      const nextGraph = toCanvasGraph({
+        nodes: [...nodes, ...addition.nodes],
+        edges: [...edges, ...addition.edges]
+      });
+      setNodes(nextGraph.nodes);
+      setEdges(nextGraph.edges);
+      setChildText("");
+    } catch (err) {
+      setError(err.message ?? "The child could not be added.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return (
     <section aria-label="Session graph">
       <div
@@ -220,6 +250,25 @@ export function SessionGraph({ graph, sessionId }) {
             type="submit"
             disabled={!selectedNode || isSaving}>
             Save text
+          </button>
+        </form>
+        <form onSubmit={addManualChild}>
+          <label>
+            Add child
+            <input
+              value={childText}
+              onChange={(event) =>
+                setChildText(event.target.value)
+              }
+              disabled={!selectedNode || isSaving}
+              maxLength={500}
+              required
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={!selectedNode || isSaving}>
+            Add child
           </button>
         </form>
         {error && <p role="alert">{error}</p>}
