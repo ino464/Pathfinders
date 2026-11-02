@@ -2,8 +2,10 @@
 
 import {
   addManualChild,
-  updateNodeContent
+  updateNodeContent,
+  updateNodeStatus
 } from "../../../lib/graph-data";
+import { NODE_STATUSES } from "../../../lib/node-status";
 
 const MAX_NODE_CONTENT_LENGTH = 500;
 const UUID =
@@ -53,4 +55,21 @@ export async function addManualChildAction(
   }
 
   return addManualChild(sessionId, parentId, content.trim());
+}
+
+// Sets a selected node to one of the database-supported statuses.
+export async function setNodeStatusAction(
+  sessionId,
+  nodeId,
+  status
+) {
+  if (
+    !validNodeId(sessionId) ||
+    !validNodeId(nodeId) ||
+    !NODE_STATUSES.includes(status)
+  ) {
+    return null;
+  }
+
+  return updateNodeStatus(nodeId, status);
 }

@@ -2,13 +2,17 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const fake = vi.hoisted(() => ({
   addManualChild: vi.fn(),
-  updateNodeContent: vi.fn()
+  updateNodeContent: vi.fn(),
+  updateNodeStatus: vi.fn()
 }));
 
 vi.mock("../lib/graph-data", () => fake);
 
-const { addManualChildAction, editNodeAction } =
-  await import("../app/sessions/[id]/node-actions");
+const {
+  addManualChildAction,
+  editNodeAction,
+  setNodeStatusAction
+} = await import("../app/sessions/[id]/node-actions");
 
 const SESSION_ID = "11111111-1111-1111-1111-111111111111";
 const NODE_ID = "22222222-2222-2222-2222-222222222222";
@@ -75,5 +79,28 @@ describe("addManualChildAction", () => {
     ).resolves.toBeNull();
 
     expect(fake.addManualChild).not.toHaveBeenCalled();
+  });
+});
+
+describe("setNodeStatusAction", () => {
+  test("delegates an allowed status", async () => {
+    fake.updateNodeStatus.mockResolvedValue({ id: NODE_ID });
+
+    await expect(
+      setNodeStatusAction(SESSION_ID, NODE_ID, "accepted")
+    ).resolves.toEqual({ id: NODE_ID });
+
+    expect(fake.updateNodeStatus).toHaveBeenCalledWith(
+      NODE_ID,
+      "accepted"
+    );
+  });
+
+  test("does not delegate an unknown status", async () => {
+    await expect(
+      setNodeStatusAction(SESSION_ID, NODE_ID, "neutral")
+    ).resolves.toBeNull();
+
+    expect(fake.updateNodeStatus).not.toHaveBeenCalled();
   });
 });
