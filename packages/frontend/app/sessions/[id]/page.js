@@ -2,9 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CurrentUser } from "../../current-user";
 import { SessionGraph } from "../../session-graph";
+import { PreferencesPanel } from "./preferences-panel";
 import {
   getSession,
-  getSessionGraph
+  getSessionGraph,
+  listPreferences
 } from "../../../lib/graph-data";
 
 // a session id is a uuid, anything else is not found
@@ -20,7 +22,10 @@ export default async function SessionPage({ params }) {
   const session = await getSession(id);
   if (!session) notFound();
 
-  const graph = await getSessionGraph(session.id);
+  const [graph, preferences] = await Promise.all([
+    getSessionGraph(session.id),
+    listPreferences(session.id)
+  ]);
 
   return (
     <main>
@@ -31,6 +36,10 @@ export default async function SessionPage({ params }) {
         key={session.id}
         graph={graph}
         sessionId={session.id}
+      />
+      <PreferencesPanel
+        sessionId={session.id}
+        preferences={preferences}
       />
       <CurrentUser />
     </main>

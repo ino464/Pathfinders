@@ -220,6 +220,60 @@ export async function getExpansionInputs(sessionId) {
   return { nodes, edges, preferences };
 }
 
+// Returns a session's preferences in the order context assembly
+// joins them: created_at, then id.
+export async function listPreferences(sessionId) {
+  const supabase = await createClient();
+
+  return unwrap(
+    await supabase
+      .from("preferences")
+      .select("id, content, created_at")
+      .eq("session_id", sessionId)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+  );
+}
+
+// Adds a preference to a session and returns the new row.
+// Throws when the content is blank.
+export async function addPreference(sessionId, content) {
+  if (typeof content !== "string" || content.trim() === "") {
+    throw new Error("Preference must be a non-empty string");
+  }
+
+  const supabase = await createClient();
+
+  return unwrap(
+    await supabase
+      .from("preferences")
+      .insert({
+        session_id: sessionId,
+        content: content.trim()
+      })
+      .select("id, content, created_at")
+      .single()
+  );
+}
+
+// Deletes a preference and returns its id. The table has no
+// deleted_at column, so the row is removed. Throws when no
+// preference of the user's matches.
+export async function removePreference(preferenceId) {
+  const supabase = await createClient();
+
+  const preference = unwrap(
+    await supabase
+      .from("preferences")
+      .delete()
+      .eq("id", preferenceId)
+      .select("id")
+      .single()
+  );
+
+  return preference.id;
+}
+
 // Writes the children and their edges in one transaction
 // through the add_children database function, so a failure
 // leaves no node without a parent.

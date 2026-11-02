@@ -49,10 +49,18 @@ The data access layer is a single module,
 the only code in the app that reads or writes the `sessions`,
 `nodes`, `edges` and `preferences` tables, apart from moving a
 guest's sessions into an account when they sign in
-(`lib/guest-merge.js`, see `docs/auth.md`). It exports eight
-functions: `createSession`, `getSessionGraph`,
-`getExpansionInputs`, `addNode`, `addEdge`, `addChildren`,
-`updateNodeStatus` and `deleteSubtree`.
+(`lib/guest-merge.js`, see `docs/auth.md`). It exports these
+functions:
+
+- Sessions: `createSession`, `getLatestSession`, `listSessions`,
+  `getSession`, `renameSession` and `deleteSession`.
+- Graph: `getSessionGraph`, `getExpansionInputs`, `addNode`,
+  `addEdge`, `addChildren`, `updateNodeStatus` and
+  `deleteSubtree`.
+- Preferences: `listPreferences`, `addPreference` and
+  `removePreference`.
+
+Notes on the functions:
 
 - The module imports `server-only`, so importing it from a
   client component fails the build.
@@ -65,13 +73,19 @@ functions: `createSession`, `getSessionGraph`,
   assembly needs: nodes with `created_at` and `deleted_at`,
   edges, and preferences. It includes deleted nodes, because
   context assembly decides how to treat them.
+- `listPreferences` returns a session's preferences in
+  `created_at` order, then `id` order. Context assembly joins
+  them in the same order, so the preferences panel on the
+  session page (#53) shows the order that expansion uses.
+- `removePreference` deletes the row. The `preferences` table
+  has no `deleted_at` column.
 - `addChildren` writes the children of one node and their edges
   through the `add_children` database function, in one
   transaction. If any insert fails, nothing is written, so a
   failed expansion cannot leave a node without a parent.
-- Because everything goes through these six functions, the
-  canvas (#33) can be built against fixture data, and tests can
-  replace the Supabase client with a fake one.
+- Because everything goes through these functions, the canvas
+  (#33) can be built against fixture data, and tests can replace
+  the Supabase client with a fake one.
 
 ### Deleting a subtree
 
