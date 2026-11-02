@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "./auth-provider";
 import { GuestUpgrade } from "./guest-upgrade";
@@ -18,7 +19,7 @@ function GuestView({ user }) {
   );
 }
 
-function AccountView({ user }) {
+export function SignOutButton() {
   const { signOut } = useAuth();
   const [error, setError] = useState(null);
 
@@ -32,15 +33,23 @@ function AccountView({ user }) {
   }
 
   return (
+    <>
+      <button type="button" onClick={handleSignOut}>
+        Sign out
+      </button>
+      {error && <p role="alert">{error}</p>}
+    </>
+  );
+}
+
+function AccountView({ user }) {
+  return (
     <div>
       <p>
         Signed in as{" "}
         <span data-testid="user-email">{user.email}</span>
       </p>
-      <button type="button" onClick={handleSignOut}>
-        Sign out
-      </button>
-      {error && <p role="alert">{error}</p>}
+      <SignOutButton />
     </div>
   );
 }
@@ -63,6 +72,7 @@ export function CurrentUser() {
       ) : (
         <AccountView user={user} />
       )}
+      <Link href="/account">Account</Link>
     </>
   );
 }
