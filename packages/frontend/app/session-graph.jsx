@@ -78,6 +78,8 @@ export function SessionGraph({ graph, sessionId }) {
     (_, selectedNode) => {
       setSelectedNodeId(selectedNode.id);
       setNodeText(selectedNode.data.content);
+      setChildText("");
+      setError(null);
       setNodes((currentNodes) =>
         currentNodes.map((node) => ({
           ...node,
@@ -91,6 +93,8 @@ export function SessionGraph({ graph, sessionId }) {
   const clearSelection = useCallback(() => {
     setSelectedNodeId(null);
     setNodeText("");
+    setChildText("");
+    setError(null);
     setNodes((currentNodes) =>
       currentNodes.map((node) => ({ ...node, selected: false }))
     );
