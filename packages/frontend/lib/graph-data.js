@@ -298,6 +298,16 @@ export async function addChildren(
   };
 }
 
+// Adds one user-written child through the same atomic function as
+// generated expansions.
+export async function addManualChild(
+  sessionId,
+  parentId,
+  content
+) {
+  return addChildren(sessionId, parentId, [content]);
+}
+
 export async function addNode(
   sessionId,
   content,
@@ -378,6 +388,22 @@ export async function updateNodeStatus(nodeId, status) {
     await supabase
       .from("nodes")
       .update({ status })
+      .eq("id", nodeId)
+      .select(FLOW_NODE_COLUMNS)
+      .single()
+  );
+
+  return toFlowNode(node);
+}
+
+// Changes a node's visible text and returns the updated canvas node.
+export async function updateNodeContent(nodeId, content) {
+  const supabase = await createClient();
+
+  const node = unwrap(
+    await supabase
+      .from("nodes")
+      .update({ content })
       .eq("id", nodeId)
       .select(FLOW_NODE_COLUMNS)
       .single()

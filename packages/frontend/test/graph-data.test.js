@@ -18,9 +18,11 @@ const {
   getSessionGraph,
   getExpansionInputs,
   addChildren,
+  addManualChild,
   addNode,
   addEdge,
   updateNodeStatus,
+  updateNodeContent,
   deleteSubtree,
   listPreferences,
   addPreference,
@@ -522,6 +524,34 @@ describe("addChildren", () => {
   });
 });
 
+describe("addManualChild", () => {
+  test("delegates one child to add_children", async () => {
+    fake.client = fakeClient({
+      results: {
+        rpc: [
+          {
+            data: { nodes: [], edges: [] },
+            error: null
+          }
+        ]
+      }
+    });
+
+    await addManualChild("s1", "p1", "Written child");
+
+    expect(fake.client.calls).toEqual([
+      {
+        rpc: "add_children",
+        args: {
+          p_session_id: "s1",
+          p_parent_node_id: "p1",
+          p_contents: ["Written child"]
+        }
+      }
+    ]);
+  });
+});
+
 describe("addNode", () => {
   test("inserts the node and returns it in React Flow shape", async () => {
     fake.client = fakeClient({
@@ -772,6 +802,35 @@ describe("updateNodeStatus", () => {
       expect(node.data.status).toBe(status);
     }
   );
+});
+
+describe("updateNodeContent", () => {
+  test("updates the content and returns the node", async () => {
+    fake.client = fakeClient({
+      results: {
+        nodes: [
+          {
+            data: {
+              id: "n1",
+              content: "Edited idea",
+              status: "pending",
+              position_x: null,
+              position_y: null
+            },
+            error: null
+          }
+        ]
+      }
+    });
+
+    const node = await updateNodeContent("n1", "Edited idea");
+
+    expect(node.data.content).toBe("Edited idea");
+    expect(fake.client.calls[0].ops.slice(0, 2)).toEqual([
+      ["update", { content: "Edited idea" }],
+      ["eq", "id", "n1"]
+    ]);
+  });
 });
 
 describe("deleteSubtree", () => {

@@ -36,6 +36,24 @@ h1 {
   margin: 0;
 }
 
+.session-graph__selection form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+.session-graph__selection label {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.session-graph__selection > button {
+  margin-top: 0.75rem;
+  margin-right: 0.5rem;
+}
+
 .session-node {
   width: 180px;
   padding: 0.75rem;
@@ -50,6 +68,16 @@ h1 {
 .session-node.is-selected {
   border-color: #2563eb;
   box-shadow: 0 0 0 2px #bfdbfe;
+}
+
+.session-node--accepted {
+  border-color: #15803d;
+  background: #f0fdf4;
+}
+
+.session-node--rejected {
+  border-color: #b91c1c;
+  background: #fef2f2;
 }
 
 .session-node__label,
