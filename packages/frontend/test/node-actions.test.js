@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const fake = vi.hoisted(() => ({
   addManualChild: vi.fn(),
+  deleteSubtree: vi.fn(),
   updateNodeContent: vi.fn(),
   updateNodeStatus: vi.fn()
 }));
@@ -11,6 +12,7 @@ vi.mock("../lib/graph-data", () => fake);
 const {
   addManualChildAction,
   editNodeAction,
+  pruneNodeAction,
   setNodeStatusAction
 } = await import("../app/sessions/[id]/node-actions");
 
@@ -102,5 +104,28 @@ describe("setNodeStatusAction", () => {
     ).resolves.toBeNull();
 
     expect(fake.updateNodeStatus).not.toHaveBeenCalled();
+  });
+});
+
+describe("pruneNodeAction", () => {
+  test("delegates a valid selected node", async () => {
+    fake.deleteSubtree.mockResolvedValue([NODE_ID]);
+
+    await expect(
+      pruneNodeAction(SESSION_ID, NODE_ID)
+    ).resolves.toEqual([NODE_ID]);
+
+    expect(fake.deleteSubtree).toHaveBeenCalledWith(
+      SESSION_ID,
+      NODE_ID
+    );
+  });
+
+  test("does not delegate an invalid node id", async () => {
+    await expect(
+      pruneNodeAction(SESSION_ID, "not-a-uuid")
+    ).resolves.toBeNull();
+
+    expect(fake.deleteSubtree).not.toHaveBeenCalled();
   });
 });

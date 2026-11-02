@@ -2,6 +2,7 @@
 
 import {
   addManualChild,
+  deleteSubtree,
   updateNodeContent,
   updateNodeStatus
 } from "../../../lib/graph-data";
@@ -72,4 +73,13 @@ export async function setNodeStatusAction(
   }
 
   return updateNodeStatus(nodeId, status);
+}
+
+// Prunes a selected node and every descendant deleteSubtree can remove.
+export async function pruneNodeAction(sessionId, nodeId) {
+  if (!validNodeId(sessionId) || !validNodeId(nodeId)) {
+    return null;
+  }
+
+  return deleteSubtree(sessionId, nodeId);
 }
