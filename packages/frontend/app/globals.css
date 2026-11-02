@@ -52,6 +52,16 @@ h1 {
   box-shadow: 0 0 0 2px #bfdbfe;
 }
 
+.session-node--accepted {
+  border-color: #15803d;
+  background: #f0fdf4;
+}
+
+.session-node--rejected {
+  border-color: #b91c1c;
+  background: #fef2f2;
+}
+
 .session-node__label,
 .session-node__detail {
   display: block;
