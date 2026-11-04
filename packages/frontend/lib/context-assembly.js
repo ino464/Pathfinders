@@ -28,8 +28,20 @@ function assertTargetUsable(nodeById, targetNodeId){
   if (target.deleted_at) {
     throw new Error(`Error: Node was deleted`);
   }
-
 }
+
+function buildEdgeLookups(edges) {
+  const childrenOf = new Map();
+  const parentsOf = new Map();
+
+  for (const e of edges) {
+    addTo(parentsOf, e.child_node_id, e.parent_node_id);
+    addTo(childrenOf, e.parent_node_id, e.child_node_id);
+  }
+
+  return { parentsOf, childrenOf };
+}
+
 
 // Builds the model's message list for expanding a node. Pure function:
 // no Supabase, Next, or React imports. See docs/context-assembly-cases.md.
@@ -42,17 +54,9 @@ export function assembleContext(
   // map and look up each node by its id instead of looping through list every time
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
 
-  // For each node, remember who its parents/children are
-  const childrenOf = new Map();
-  const parentsOf = new Map();
-
-  // build the parent and child lookups from the edge list
-  for (const e of edges) {
-    addTo(parentsOf, e.child_node_id, e.parent_node_id);
-    addTo(childrenOf, e.parent_node_id, e.child_node_id);
-  }
-  
   assertTargetUsable(nodeById, targetNodeId);
+
+  const { parentsOf, childrenOf } = buildEdgeLookups(edges);
 
   // collect every node before the current node (all ancestors)
   // the set only keeps one copy of each id (no duplicates)
