@@ -79,6 +79,45 @@ function findRoot(nodes, parentsOf, ancestors) {
   return root;
 }
 
+function orderAncestors(root, ancestors, parentsOf, childrenOf, nodeById) {
+  // for each ancestor, count how many of its parents we haven't output yet
+  // needed so node doesn't get output as soon as one of its parents does
+  const waiting = new Map();
+  for (const id of ancestors) {
+    const parents = (parentsOf.get(id) ?? []).filter((p) =>
+      ancestors.has(p)
+    );
+    waiting.set(id, parents.length);
+  }
+
+  // the root is first because it has no parents to wait for
+  const ordered = [];
+  const ready = [root];
+
+  while (ready.length > 0) {
+    ready.sort(byTimeThenId);
+    // shift (not pop) because we sorted: it takes the earliest node
+    const next = ready.shift();
+    ordered.push(next);
+
+    for (const childId of childrenOf.get(next.id) ?? []) {
+      // ignore children that aren't ancestors (other branches)
+      if (!ancestors.has(childId)) continue;
+
+      waiting.set(childId, waiting.get(childId) - 1);
+
+      if (waiting.get(childId) === 0) {
+        ready.push(nodeById.get(childId));
+      }
+    }
+  }
+
+  if (ordered.length !== ancestors.size) {
+    throw new Error("Error: graph has a cycle");
+  }
+
+  return ordered;
+}
 
 // Builds the model's message list for expanding a node. Pure function:
 // no Supabase, Next, or React imports. See docs/context-assembly-cases.md.
@@ -99,46 +138,7 @@ export function assembleContext(
   
   const root = findRoot(nodes, parentsOf, ancestors);
 
- 
-  // for each ancestor, count how many of its parents we haven't output yet
-  // needed so node doesn't get output as soon as one of its parents does
-  const waiting = new Map();
-  for (const id of ancestors) {
-    const parents = (parentsOf.get(id) ?? []).filter((p) =>
-      ancestors.has(p)
-    );
-    waiting.set(id, parents.length);
-  }
-
-  // ordered = the final list, ready = nodes that can go next
-  // the root is first because it has no parents to wait for
-  const ordered = [];
-  const ready = [root];
-
-  while (ready.length > 0) {
-    // pick the earliest node that is ready
-    ready.sort(byTimeThenId);
-    //not pop because we sorted shift removes and returns first item
-    const next = ready.shift();
-    ordered.push(next);
-
-    // each child of that node now waits on one less parent
-    for (const childId of childrenOf.get(next.id) ?? []) {
-      // ignore children that aren't ancestors (other branches)
-      if (!ancestors.has(childId)) continue;
-
-      waiting.set(childId, waiting.get(childId) - 1);
-
-      // no parents left to wait for, so this child is ready
-      if (waiting.get(childId) === 0) {
-        ready.push(nodeById.get(childId));
-      }
-    }
-  }
-  // if some ancestors never became ready, the graph has a cycle
-  if (ordered.length !== ancestors.size) {
-    throw new Error("Error: graph has a cycle");
-  }
+  const ordered = orderAncestors(root, ancestors, parentsOf, childrenOf, nodeById);
 
   //turn each node into a message (content)
   const messages = ordered.map((node) => ({
