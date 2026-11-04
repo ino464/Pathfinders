@@ -42,6 +42,27 @@ function buildEdgeLookups(edges) {
   return { parentsOf, childrenOf };
 }
 
+// collect every node before the current node (all ancestors)
+// the set only keeps one copy of each id (no duplicates)
+// Goal -> sets up a list of all nodes needed for context  
+function collectAncestors(nodeById, parentsOf, targetNodeId) {
+  const ancestors = new Set();
+  const toVisit = [targetNodeId];
+
+  while (toVisit.length > 0) {
+    const id = toVisit.pop();
+
+    if (ancestors.has(id)) continue;
+
+    const node = nodeById.get(id);
+    if (!node || node.deleted_at) continue;
+
+    ancestors.add(id);
+    toVisit.push(...(parentsOf.get(id) ?? []));
+  }
+
+  return ancestors;
+}
 
 // Builds the model's message list for expanding a node. Pure function:
 // no Supabase, Next, or React imports. See docs/context-assembly-cases.md.
@@ -58,32 +79,7 @@ export function assembleContext(
 
   const { parentsOf, childrenOf } = buildEdgeLookups(edges);
 
-  // collect every node before the current node (all ancestors)
-  // the set only keeps one copy of each id (no duplicates)
-  // Goal -> sets up a list of all nodes needed for context
-  const ancestors = new Set();
-
-  // ids we still need to look at
-  // starts at current node, appends parents to the stack during while loop
-  const toVisit = [targetNodeId];
-
-  while (toVisit.length > 0) {
-    // take the next id off the list
-    const id = toVisit.pop();
-
-    // if already collected, skip
-    if (ancestors.has(id)) continue;
-
-    // if node was deleted, skip
-    const node = nodeById.get(id);
-    if (!node || node.deleted_at) continue;
-
-    ancestors.add(id);
-
-    // add all of its parents to the list
-    // the root has no parents, so use an empty list in that case.
-    toVisit.push(...(parentsOf.get(id) ?? []));
-  }
+  const ancestors = collectAncestors(nodeById, parentsOf, targetNodeId);
 
   // there has to be exactly one root (a node with no parent)
   const roots = nodes.filter((n) => !parentsOf.has(n.id));
