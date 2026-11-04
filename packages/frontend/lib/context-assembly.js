@@ -1,6 +1,6 @@
 // decides which of two nodes goes first:
 // the older one, or the lower id if created same time
-function byTimeThenId {
+function byTimeThenId(a,b){
   if (a.created_at !== b.created_at) {
     return a.created_at < b.created_at ? -1 : 1;
   }
@@ -8,7 +8,7 @@ function byTimeThenId {
     return a.id < b.id ? -1 : 1;
   }
   return 0;
-};
+}
 
 function addTo(map, key, value) {
   if (!map.has(key)) {
