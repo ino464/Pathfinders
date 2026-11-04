@@ -7,3 +7,16 @@ export const NODE_STATUSES = [
   "accepted",
   "rejected"
 ];
+
+// The canvas shows accepted as a liked flag and rejected as a
+// disliked flag. Pending means no flag (#91).
+export const FLAGS = {
+  accepted: "Liked",
+  rejected: "Disliked"
+};
+
+// The status to save when the user clicks a flag: the clicked
+// flag, or pending when that flag is already set.
+export function nextFlagStatus(current, clicked) {
+  return current === clicked ? "pending" : clicked;
+}
