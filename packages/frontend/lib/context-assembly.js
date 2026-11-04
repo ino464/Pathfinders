@@ -2,7 +2,7 @@
 
 // decides which of two nodes goes first:
 // the older one, or the lower id if created same time
-function byTimeThenId(a,b){
+function byTimeThenId(a, b) {
   if (a.created_at !== b.created_at) {
     return a.created_at < b.created_at ? -1 : 1;
   }
@@ -19,7 +19,7 @@ function addTo(map, key, value) {
   map.get(key).push(value);
 }
 
-function assertTargetUsable(nodeById, targetNodeId){
+function assertTargetUsable(nodeById, targetNodeId) {
   // the target has to exist and not be deleted
   const target = nodeById.get(targetNodeId);
   if (!target) {
@@ -44,7 +44,7 @@ function buildEdgeLookups(edges) {
 
 // collect every node before the current node (all ancestors)
 // the set only keeps one copy of each id (no duplicates)
-// Goal -> sets up a list of all nodes needed for context  
+// Goal -> sets up a list of all nodes needed for context
 function collectAncestors(nodeById, parentsOf, targetNodeId) {
   const ancestors = new Set();
   const toVisit = [targetNodeId];
@@ -79,7 +79,13 @@ function findRoot(nodes, parentsOf, ancestors) {
   return root;
 }
 
-function orderAncestors(root, ancestors, parentsOf, childrenOf, nodeById) {
+function orderAncestors(
+  root,
+  ancestors,
+  parentsOf,
+  childrenOf,
+  nodeById
+) {
   // for each ancestor, count how many of its parents we haven't output yet
   // needed so node doesn't get output as soon as one of its parents does
   const waiting = new Map();
@@ -153,11 +159,21 @@ export function assembleContext(
 
   const { parentsOf, childrenOf } = buildEdgeLookups(edges);
 
-  const ancestors = collectAncestors(nodeById, parentsOf, targetNodeId);
-  
+  const ancestors = collectAncestors(
+    nodeById,
+    parentsOf,
+    targetNodeId
+  );
+
   const root = findRoot(nodes, parentsOf, ancestors);
 
-  const ordered = orderAncestors(root, ancestors, parentsOf, childrenOf, nodeById);
+  const ordered = orderAncestors(
+    root,
+    ancestors,
+    parentsOf,
+    childrenOf,
+    nodeById
+  );
 
   return toMessages(ordered, root, preferences);
 }
