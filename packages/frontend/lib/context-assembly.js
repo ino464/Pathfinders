@@ -1,3 +1,5 @@
+// Below are Helper functions, assembleContext is the main function
+
 // decides which of two nodes goes first:
 // the older one, or the lower id if created same time
 function byTimeThenId(a,b){
@@ -22,14 +24,14 @@ function addTo(map, key, value) {
 export function assembleContext(
   nodes,
   edges,
-  targetNodeId,
+  targetnodeById,
   preferences = []
 ) {
   // map and look up each node by its id instead of looping through list every time
-  const nodeId = new Map(nodes.map((n) => [n.id, n]));
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
 
   // the target has to exist and not be deleted
-  const target = nodeId.get(targetNodeId);
+  const target = nodeById.get(targetnodeById);
   if (!target) {
     throw new Error(`Error: Node was not found`);
   }
@@ -54,7 +56,7 @@ export function assembleContext(
 
   // ids we still need to look at
   // starts at current node, appends parents to the stack during while loop
-  const toVisit = [targetNodeId];
+  const toVisit = [targetnodeById];
 
   while (toVisit.length > 0) {
     // take the next id off the list
@@ -64,7 +66,7 @@ export function assembleContext(
     if (ancestors.has(id)) continue;
 
     // if node was deleted, skip
-    const node = nodeId.get(id);
+    const node = nodeById.get(id);
     if (!node || node.deleted_at) continue;
 
     ancestors.add(id);
@@ -117,7 +119,7 @@ export function assembleContext(
 
       // no parents left to wait for, so this child is ready
       if (waiting.get(childId) === 0) {
-        ready.push(nodeId.get(childId));
+        ready.push(nodeById.get(childId));
       }
     }
   }
