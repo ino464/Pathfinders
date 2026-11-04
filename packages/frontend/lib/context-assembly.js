@@ -1,3 +1,15 @@
+// decides which of two nodes goes first:
+// the older one, or the lower id if created same time
+function byTimeThenId {
+  if (a.created_at !== b.created_at) {
+    return a.created_at < b.created_at ? -1 : 1;
+  }
+  if (a.id !== b.id) {
+    return a.id < b.id ? -1 : 1;
+  }
+  return 0;
+};
+
 // Builds the model's message list for expanding a node. Pure function:
 // no Supabase, Next, or React imports. See docs/context-assembly-cases.md.
 export function assembleContext(
@@ -76,18 +88,6 @@ export function assembleContext(
   if (!ancestors.has(root.id)) {
     throw new Error(`Error: no direct path to root`);
   }
-
-  // decides which of two nodes goes first:
-  // the older one, or the lower id if created same time
-  const byTimeThenId = (a, b) => {
-    if (a.created_at !== b.created_at) {
-      return a.created_at < b.created_at ? -1 : 1;
-    }
-    if (a.id !== b.id) {
-      return a.id < b.id ? -1 : 1;
-    }
-    return 0;
-  };
 
   // for each ancestor, count how many of its parents we haven't output yet
   // needed so node doesn't get output as soon as one of its parents does
