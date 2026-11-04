@@ -19,25 +19,28 @@ function addTo(map, key, value) {
   map.get(key).push(value);
 }
 
-// Builds the model's message list for expanding a node. Pure function:
-// no Supabase, Next, or React imports. See docs/context-assembly-cases.md.
-export function assembleContext(
-  nodes,
-  edges,
-  targetnodeById,
-  preferences = []
-) {
-  // map and look up each node by its id instead of looping through list every time
-  const nodeById = new Map(nodes.map((n) => [n.id, n]));
-
+function assertTargetUsable(nodeById, targetNodeId){
   // the target has to exist and not be deleted
-  const target = nodeById.get(targetnodeById);
+  const target = nodeById.get(targetNodeId);
   if (!target) {
     throw new Error(`Error: Node was not found`);
   }
   if (target.deleted_at) {
     throw new Error(`Error: Node was deleted`);
   }
+
+}
+
+// Builds the model's message list for expanding a node. Pure function:
+// no Supabase, Next, or React imports. See docs/context-assembly-cases.md.
+export function assembleContext(
+  nodes,
+  edges,
+  targetNodeId,
+  preferences = []
+) {
+  // map and look up each node by its id instead of looping through list every time
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
 
   // For each node, remember who its parents/children are
   const childrenOf = new Map();
@@ -48,6 +51,8 @@ export function assembleContext(
     addTo(parentsOf, e.child_node_id, e.parent_node_id);
     addTo(childrenOf, e.parent_node_id, e.child_node_id);
   }
+  
+  assertTargetUsable(nodeById, targetNodeId);
 
   // collect every node before the current node (all ancestors)
   // the set only keeps one copy of each id (no duplicates)
@@ -56,7 +61,7 @@ export function assembleContext(
 
   // ids we still need to look at
   // starts at current node, appends parents to the stack during while loop
-  const toVisit = [targetnodeById];
+  const toVisit = [targetNodeId];
 
   while (toVisit.length > 0) {
     // take the next id off the list
