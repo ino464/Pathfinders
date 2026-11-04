@@ -115,6 +115,13 @@ value, and `updateNodeStatus` refuses it before it calls the
 database. The list is in `lib/node-status.js`, which does not
 import `server-only`, so the canvas can use it too.
 
+The canvas shows the status as a flag (#91). `accepted` is a
+green "liked" flag and `rejected` is a red "disliked" flag, and
+a flagged node shows the flag in its corner. `pending` means no
+flag. Clicking the set flag again saves `pending`. The status is
+a label for the user only: context assembly, expansion, pruning
+and the layout do not read it.
+
 ### Session graph layout
 
 Node positions are computed each time a graph loads.
