@@ -14,6 +14,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { requestExpansion } from "../lib/expand-client";
 import { layoutGraph } from "../lib/graph-layout";
+import { FLAGS, nextFlagStatus } from "../lib/node-status";
 import {
   addManualChildAction,
   editNodeAction,
@@ -35,16 +36,25 @@ function toCanvasGraph(graph) {
   };
 }
 
+//a liked or disliked node shows a flag in its corner, and a
+//pending node shows none (#91)
 function SessionNode({ data, selected }) {
+  const flag = FLAGS[data.status];
   return (
     <div
-      className={`session-node session-node--${data.status}${selected ? " is-selected" : ""}`}>
+      className={`session-node${selected ? " is-selected" : ""}`}>
       <Handle type="target" position={Position.Left} />
+      {flag && (
+        <span
+          className={`session-node__flag session-node__flag--${data.status}`}
+          role="img"
+          aria-label={flag}
+          title={flag}>
+          ⚑
+        </span>
+      )}
       <span className="session-node__label">
         {data.content}
-      </span>
-      <span className="session-node__detail">
-        {data.status}
       </span>
       <Handle type="source" position={Position.Right} />
     </div>
@@ -265,18 +275,30 @@ export function SessionGraph({ graph, sessionId }) {
           disabled={!selectedNode || isBusy}>
           {isExpanding ? "Expanding…" : "Expand"}
         </button>
-        <button
-          type="button"
-          onClick={() => saveStatus("accepted")}
-          disabled={!selectedNode || isBusy}>
-          Accept
-        </button>
-        <button
-          type="button"
-          onClick={() => saveStatus("rejected")}
-          disabled={!selectedNode || isBusy}>
-          Reject
-        </button>
+        <div className="session-graph__flags">
+          {Object.entries(FLAGS).map(([status, flag]) => (
+            <button
+              key={status}
+              type="button"
+              className={`flag-toggle flag-toggle--${status}`}
+              aria-label={`Flag as ${flag.toLowerCase()}`}
+              aria-pressed={
+                selectedNode?.data.status === status
+              }
+              title={flag}
+              onClick={() =>
+                saveStatus(
+                  nextFlagStatus(
+                    selectedNode.data.status,
+                    status
+                  )
+                )
+              }
+              disabled={!selectedNode || isBusy}>
+              ⚑
+            </button>
+          ))}
+        </div>
         <form onSubmit={editSelectedNode}>
           <label>
             Edit idea
