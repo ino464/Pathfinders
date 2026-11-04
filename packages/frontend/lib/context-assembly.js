@@ -64,6 +64,22 @@ function collectAncestors(nodeById, parentsOf, targetNodeId) {
   return ancestors;
 }
 
+// there has to be exactly one root (a node with no parent)
+function findRoot(nodes, parentsOf, ancestors) {
+  const roots = nodes.filter((n) => !parentsOf.has(n.id));
+  if (roots.length !== 1) {
+    throw new Error(`Error: expected 1 root, found multiple`);
+  }
+
+  const root = roots[0];
+  if (!ancestors.has(root.id)) {
+    throw new Error(`Error: no direct path to root`);
+  }
+
+  return root;
+}
+
+
 // Builds the model's message list for expanding a node. Pure function:
 // no Supabase, Next, or React imports. See docs/context-assembly-cases.md.
 export function assembleContext(
@@ -80,19 +96,10 @@ export function assembleContext(
   const { parentsOf, childrenOf } = buildEdgeLookups(edges);
 
   const ancestors = collectAncestors(nodeById, parentsOf, targetNodeId);
+  
+  const root = findRoot(nodes, parentsOf, ancestors);
 
-  // there has to be exactly one root (a node with no parent)
-  const roots = nodes.filter((n) => !parentsOf.has(n.id));
-  if (roots.length !== 1) {
-    throw new Error(`Error: expected 1 root, found multiple`);
-  }
-
-  const root = roots[0];
-  // if the root wasn't reached, a deleted node cut off the path to it
-  if (!ancestors.has(root.id)) {
-    throw new Error(`Error: no direct path to root`);
-  }
-
+ 
   // for each ancestor, count how many of its parents we haven't output yet
   // needed so node doesn't get output as soon as one of its parents does
   const waiting = new Map();
