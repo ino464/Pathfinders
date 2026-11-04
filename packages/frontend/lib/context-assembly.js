@@ -10,6 +10,13 @@ function byTimeThenId {
   return 0;
 };
 
+function addTo(map, key, value) {
+  if (!map.has(key)) {
+    map.set(key, []);
+  }
+  map.get(key).push(value);
+}
+
 // Builds the model's message list for expanding a node. Pure function:
 // no Supabase, Next, or React imports. See docs/context-assembly-cases.md.
 export function assembleContext(
@@ -36,18 +43,8 @@ export function assembleContext(
 
   // build the parent and child lookups from the edge list
   for (const e of edges) {
-    // first time we see this child, give it an empty edge list
-    if (!parentsOf.has(e.child_node_id)) {
-      parentsOf.set(e.child_node_id, []);
-    }
-    // add this edge's parent to child list
-    parentsOf.get(e.child_node_id).push(e.parent_node_id);
-
-    // same idea, but keyed by the parent
-    if (!childrenOf.has(e.parent_node_id)) {
-      childrenOf.set(e.parent_node_id, []);
-    }
-    childrenOf.get(e.parent_node_id).push(e.child_node_id);
+    addTo(parentsOf, e.child_node_id, e.parent_node_id);
+    addTo(childrenOf, e.parent_node_id, e.child_node_id);
   }
 
   // collect every node before the current node (all ancestors)
