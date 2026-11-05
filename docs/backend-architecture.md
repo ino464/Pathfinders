@@ -158,3 +158,24 @@ sessions. Blocking direct writes entirely would mean removing
 write access from the `authenticated` role and having the server
 use the service-role key, which moves every ownership check into
 our own code. That was judged not worth the risk.
+
+### What `/api/expand` answers
+
+`POST /api/expand` checks that someone is signed in before it
+reads the body. A request with no session gets `401`, so the
+route never reaches the database for it (#87). After that, RLS
+decides what the user can see. A signed-in user who names
+another user's session gets the same `404` as for a node that
+does not exist, so the answer does not show that the session
+exists.
+
+| Status | When                                                                                                                     |
+| ------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `201`  | The children were added. The body is `{ nodes, edges }`.                                                                 |
+| `400`  | The body is not JSON, `sessionId` or `nodeId` is not a UUID, or `instruction` is not a string of at most 500 characters. |
+| `401`  | Nobody is signed in: `Sign in to expand ideas.`                                                                          |
+| `404`  | The node is not in the session, is deleted, or the session belongs to another user: `Node not found in this session.`    |
+| `429`  | The session hit the expansion limit.                                                                                     |
+| `502`  | The model request failed or its answer was not valid.                                                                    |
+| `504`  | The model did not answer in time.                                                                                        |
+| `500`  | Any other error. The body has no details.                                                                                |
