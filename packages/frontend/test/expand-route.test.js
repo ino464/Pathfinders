@@ -14,8 +14,22 @@ const fake = vi.hoisted(() => {
       this.status = status;
     }
   }
-  return { ExpandError, expand: null };
+  return { ExpandError, expand: null, user: null };
 });
+
+vi.mock("../lib/supabase-server", () => ({
+  createClient: async () => ({
+    auth: {
+      getUser: async () =>
+        fake.user
+          ? { data: { user: fake.user }, error: null }
+          : {
+              data: { user: null },
+              error: new Error("Auth session missing!")
+            }
+    }
+  })
+}));
 
 vi.mock("../lib/expand", () => ({
   ExpandError: fake.ExpandError,
@@ -39,6 +53,7 @@ function post(body) {
 
 describe("POST /api/expand", () => {
   beforeEach(() => {
+    fake.user = { id: "user-1" };
     vi.spyOn(console, "error").mockImplementation(() => {});
     fake.expand = vi.fn(async () => ({
       nodes: [{ id: "c1" }],
@@ -62,6 +77,30 @@ describe("POST /api/expand", () => {
       edges: [{ id: "e1" }]
     });
     expect(fake.expand).toHaveBeenCalledWith(SESSION, NODE, "");
+  });
+
+  test("answers 401 without expanding when nobody is signed in", async () => {
+    fake.user = null;
+
+    const response = await post({
+      sessionId: SESSION,
+      nodeId: NODE
+    });
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({
+      error: "Sign in to expand ideas."
+    });
+    expect(fake.expand).not.toHaveBeenCalled();
+  });
+
+  test("answers 401 before reading an invalid body when nobody is signed in", async () => {
+    fake.user = null;
+
+    const response = await post("not json");
+
+    expect(response.status).toBe(401);
+    expect(fake.expand).not.toHaveBeenCalled();
   });
 
   test("answers 400 when the body is not JSON", async () => {
@@ -123,6 +162,7 @@ describe("POST /api/expand", () => {
 
 describe("POST /api/expand direction (#52)", () => {
   beforeEach(() => {
+    fake.user = { id: "user-1" };
     fake.expand = vi.fn(async () => ({ nodes: [], edges: [] }));
   });
 
