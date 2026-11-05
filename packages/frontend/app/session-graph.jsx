@@ -36,7 +36,7 @@ function toCanvasGraph(graph) {
   };
 }
 
-//a liked or disliked node shows a flag in its corner, and a
+//a liked or disliked node shows a stripe along its top, and a
 //pending node shows none (#91)
 function SessionNode({ data, selected }) {
   const flag = FLAGS[data.status];
@@ -46,12 +46,11 @@ function SessionNode({ data, selected }) {
       <Handle type="target" position={Position.Left} />
       {flag && (
         <span
-          className={`session-node__flag session-node__flag--${data.status}`}
+          className={`session-node__stripe session-node__stripe--${data.status}`}
           role="img"
           aria-label={flag}
-          title={flag}>
-          ⚑
-        </span>
+          title={flag}
+        />
       )}
       <span className="session-node__label">
         {data.content}
@@ -221,7 +220,7 @@ export function SessionGraph({ graph, sessionId }) {
   async function pruneSelectedNode() {
     if (!selectedNode || isBusy) return;
     if (
-      !window.confirm("Prune this idea and its descendants?")
+      !window.confirm("Delete this idea and its descendants?")
     ) {
       return;
     }
@@ -234,7 +233,7 @@ export function SessionGraph({ graph, sessionId }) {
         selectedNode.id
       );
       if (!deletedIds)
-        throw new Error("The branch could not be pruned.");
+        throw new Error("The branch could not be deleted.");
       const deleted = new Set(deletedIds);
       setNodes((currentNodes) =>
         currentNodes.filter((node) => !deleted.has(node.id))
@@ -249,7 +248,7 @@ export function SessionGraph({ graph, sessionId }) {
       clearSelection();
     } catch (err) {
       setError(
-        err.message ?? "The branch could not be pruned."
+        err.message ?? "The branch could not be deleted."
       );
     } finally {
       setIsSaving(false);
@@ -275,7 +274,8 @@ export function SessionGraph({ graph, sessionId }) {
           disabled={!selectedNode || isBusy}>
           {isExpanding ? "Expanding…" : "Expand"}
         </button>
-        <div className="session-graph__flags">
+        <fieldset className="session-graph__markers">
+          <legend>Markers</legend>
           {Object.entries(FLAGS).map(([status, flag]) => (
             <button
               key={status}
@@ -298,7 +298,7 @@ export function SessionGraph({ graph, sessionId }) {
               ⚑
             </button>
           ))}
-        </div>
+        </fieldset>
         <form onSubmit={editSelectedNode}>
           <label>
             Edit idea
@@ -341,7 +341,7 @@ export function SessionGraph({ graph, sessionId }) {
           type="button"
           onClick={pruneSelectedNode}
           disabled={!selectedNode || isBusy}>
-          Prune branch
+          Delete branch
         </button>
         {error && <p role="alert">{error}</p>}
       </div>
