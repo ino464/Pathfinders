@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ExpandError, expandNode } from "../../../lib/expand";
+import { createClient } from "../../../lib/supabase-server";
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -7,6 +8,17 @@ const UUID =
 const MAX_DIRECTION_LENGTH = 500;
 
 export async function POST(request) {
+  const supabase = await createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json(
+      { error: "Sign in to expand ideas." },
+      { status: 401 }
+    );
+  }
+
   let body;
   try {
     body = await request.json();
