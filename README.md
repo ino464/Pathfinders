@@ -131,6 +131,20 @@ Sign-in works the same way, except Supabase first looks up the user and their ha
 
 ![Sign-in sequence diagram](docs/images/signin.png)
 
+#### Backend Call
+
+
+This third diagram covers what happens when you’re already logged in and do something that needs your data, which in our case is opening a saved session. This is where the JWT from signup/in gets used. Steps are :
+1. User opens a session (old or new)
+2. Frontend sends a request to the Next.js server with JWT attached
+3. Next.js checks if the cookie is valid
+4. If not valid, user logs out and have to resign in
+5. If its valid, server asks for users data (ie: pre-existing chats)
+6. returns only the current users data to server
+7. server returns 200 (success) and data
+
+![Protected request sequence diagram](docs/images/backendcall.png)
+
 ## Project Structure
 
 ```text
