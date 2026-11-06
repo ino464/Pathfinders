@@ -110,43 +110,56 @@ model without rewriting the user interface.
 
 ## Sequence Diagrams
 
-### Sign-up and Sign-in are very similar so description will be grouped together
+Pathfinders uses Supabase for authentication. These three diagrams
+cover signing up, signing in, and making a request while signed in.
+
+---
 
 #### Sign-up
-We have Supabase handle our authentication, but basically the steps are : 
+
+Sign-up and sign-in are similar, so they are described together.
+
 1. Sign-up by entering an email and password (you can also login with google)
 2. This would call the signUp function
-3. Supabase will then hash the password
+3. Supabase will then **hash the password**
 4. Store the user and hashed password in supabase
-5. Generate a JWT (to keep you logged in if you exit the tab) and return 200 to the frontend to notify the sign up was successful
+5. Supabase generates a **JWT** (to keep you logged in if you exit the tab) and returns 200 to the frontend to notify the sign up was successful.
 
-<details>
-<summary>Backend Call sequence diagram</summary>
+<details open>
+<summary>Sign-up sequence diagram</summary>
+<br>
 
 <img src="docs/images/signup.png" alt="Sign-up sequence diagram" width="600">
 
 </details>
 
+---
 
 #### Sign-in
 
 Sign-in works the same way, except Supabase first looks up the user and their hashed password in the database.
 
-- If the user is found and the password matches the hash, Supabase generates a JWT and returns `200` (login success).
-- If the user is not found or the password does not match, Supabase returns `400` (invalid credentials) and no JWT is created.
+| Case                              | Supabase returns | JWT created? |
+| --------------------------------- | ---------------- | ------------ |
+| User found, password matches hash | `200`            | Yes          |
+| User not found or wrong password  | `400`            | No           |
 
 <details>
 <summary>Sign-in sequence diagram</summary>
+<br>
 
 <img src="docs/images/signin.png" alt="Sign-in sequence diagram" width="600">
 
 </details>
 
+---
 
 #### Backend Call
 
+This diagram covers what happens when a signed-in user does
+something that needs their data, such as opening a saved session.
+This is where the **JWT** from sign-up or sign-in gets used.
 
-This third diagram covers what happens when you’re already logged in and do something that needs your data, which in our case is opening a saved session. This is where the JWT from signup/in gets used. Steps are :
 1. User opens a session (old or new)
 2. Frontend sends a request to the Next.js server with JWT attached
 3. Next.js checks if the cookie is valid
@@ -156,9 +169,10 @@ This third diagram covers what happens when you’re already logged in and do so
 7. server returns 200 (success) and data
 
 <details>
-<summary>Sign-up sequence diagram</summary>
+<summary>Backend call sequence diagram</summary>
+<br>
 
-<img src="docs/images/backendcall.png" alt="Backend All sequence diagram" width="600">
+<img src="docs/images/backendcall.png" alt="Backend call sequence diagram" width="600">
 
 </details>
 
