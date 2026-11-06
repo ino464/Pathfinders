@@ -110,8 +110,9 @@ model without rewriting the user interface.
 
 ## Sequence Diagrams
 
-Pathfinders uses Supabase for authentication. These three diagrams
-cover signing up, signing in, and making a request while signed in.
+Pathfinders uses Supabase for authentication. These three
+diagrams cover signing up, signing in, and making a request
+while signed in.
 
 ---
 
@@ -119,11 +120,14 @@ cover signing up, signing in, and making a request while signed in.
 
 Sign-up and sign-in are similar, so they are described together.
 
-1. Sign-up by entering an email and password (you can also login with google)
+1. Sign-up by entering an email and password (you can also login
+   with google)
 2. This would call the signUp function
 3. Supabase will then **hash the password**
 4. Store the user and hashed password in supabase
-5. Supabase generates a **JWT** (to keep you logged in if you exit the tab) and returns 200 to the frontend to notify the sign up was successful.
+5. Supabase generates a **JWT** (to keep you logged in if you
+   exit the tab) and returns 200 to the frontend to notify the
+   sign up was successful.
 
 <details open>
 <summary>Sign-up sequence diagram</summary>
@@ -137,7 +141,8 @@ Sign-up and sign-in are similar, so they are described together.
 
 #### Sign-in
 
-Sign-in works the same way, except Supabase first looks up the user and their hashed password in the database.
+Sign-in works the same way, except Supabase first looks up the
+user and their hashed password in the database.
 
 | Case                              | Supabase returns | JWT created? |
 | --------------------------------- | ---------------- | ------------ |
@@ -157,14 +162,17 @@ Sign-in works the same way, except Supabase first looks up the user and their ha
 #### Backend Call
 
 This diagram covers what happens when a signed-in user does
-something that needs their data, such as opening a saved session.
-This is where the **JWT** from sign-up or sign-in gets used.
+something that needs their data, such as opening a saved
+session. This is where the **JWT** from sign-up or sign-in gets
+used.
 
 1. User opens a session (old or new)
-2. Frontend sends a request to the Next.js server with JWT attached
+2. Frontend sends a request to the Next.js server with JWT
+   attached
 3. Next.js checks if the cookie is valid
 4. If not valid, user logs out and have to resign in
-5. If its valid, server asks for users data (ie: pre-existing chats)
+5. If its valid, server asks for users data (ie: pre-existing
+   chats)
 6. returns only the current users data to server
 7. server returns 200 (success) and data
 
@@ -175,7 +183,6 @@ This is where the **JWT** from sign-up or sign-in gets used.
 <img src="docs/images/backendcall.png" alt="Backend call sequence diagram" width="600">
 
 </details>
-
 
 ## Project Structure
 
