@@ -108,6 +108,8 @@ Context assembly is kept separate from the visual canvas. This
 allows the team to test and improve the information sent to the
 model without rewriting the user interface.
 
+## Sequence Diagrams
+
 ## Project Structure
 
 ```text
