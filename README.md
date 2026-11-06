@@ -120,7 +120,13 @@ We have Supabase handle our authentication, but basically the steps are :
 4. Store the user and hashed password in supabase
 5. Generate a JWT (to keep you logged in if you exit the tab) and return 200 to the frontend to notify the sign up was successful
 
-![Sign-up sequence diagram](docs/images/signup.png)
+<details>
+<summary>Backend Call sequence diagram</summary>
+
+<img src="docs/images/signup.png" alt="Sign-up sequence diagram" width="600">
+
+</details>
+
 
 #### Sign-in
 
@@ -129,7 +135,13 @@ Sign-in works the same way, except Supabase first looks up the user and their ha
 - If the user is found and the password matches the hash, Supabase generates a JWT and returns `200` (login success).
 - If the user is not found or the password does not match, Supabase returns `400` (invalid credentials) and no JWT is created.
 
-![Sign-in sequence diagram](docs/images/signin.png)
+<details>
+<summary>Sign-in sequence diagram</summary>
+
+<img src="docs/images/signin.png" alt="Sign-in sequence diagram" width="600">
+
+</details>
+
 
 #### Backend Call
 
@@ -143,7 +155,13 @@ This third diagram covers what happens when you’re already logged in and do so
 6. returns only the current users data to server
 7. server returns 200 (success) and data
 
-![Protected request sequence diagram](docs/images/backendcall.png)
+<details>
+<summary>Sign-up sequence diagram</summary>
+
+<img src="docs/images/backendcall.png" alt="Backend All sequence diagram" width="600">
+
+</details>
+
 
 ## Project Structure
 
