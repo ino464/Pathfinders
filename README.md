@@ -110,6 +110,27 @@ model without rewriting the user interface.
 
 ## Sequence Diagrams
 
+### Sign-up and Sign-in are very similar so description will be grouped together
+
+#### Sign-up
+We have Supabase handle our authentication, but basically the steps are : 
+1. Sign-up by entering an email and password (you can also login with google)
+2. This would call the signUp function
+3. Supabase will then hash the password
+4. Store the user and hashed password in supabase
+5. Generate a JWT (to keep you logged in if you exit the tab) and return 200 to the frontend to notify the sign up was successful
+
+![Sign-up sequence diagram](docs/images/signup.png)
+
+#### Sign-in
+
+Sign-in works the same way, except Supabase first looks up the user and their hashed password in the database.
+
+- If the user is found and the password matches the hash, Supabase generates a JWT and returns `200` (login success).
+- If the user is not found or the password does not match, Supabase returns `400` (invalid credentials) and no JWT is created.
+
+![Sign-in sequence diagram](docs/images/signin.png)
+
 ## Project Structure
 
 ```text
