@@ -319,17 +319,42 @@ client component or sent to the browser.
 
 ## Development Commands
 
-| Command                     | Description                     |
-| --------------------------- | ------------------------------- |
-| `npm run dev -w frontend`   | Starts the development server   |
-| `npm run build -w frontend` | Creates a production build      |
-| `npm run lint`              | Checks the project with ESLint  |
-| `npm run format:check`      | Checks code formatting          |
-| `npm run format`            | Fixes code formatting           |
-| `npx supabase db push`      | Applies migrations to hosted    |
-| `npx supabase start`        | Starts the optional local stack |
-| `npx supabase stop`         | Stops the optional local stack  |
-| `npx supabase db reset`     | Rebuilds the local database     |
+| Command                       | Description                     |
+| ----------------------------- | ------------------------------- |
+| `npm run dev -w frontend`     | Starts the development server   |
+| `npm run test:ui -w frontend` | Runs the Playwright UI tests    |
+| `npm run build -w frontend`   | Creates a production build      |
+| `npm run lint`                | Checks the project with ESLint  |
+| `npm run format:check`        | Checks code formatting          |
+| `npm run format`              | Fixes code formatting           |
+| `npx supabase db push`        | Applies migrations to hosted    |
+| `npx supabase start`          | Starts the optional local stack |
+| `npx supabase stop`           | Stops the optional local stack  |
+| `npx supabase db reset`       | Rebuilds the local database     |
+
+### UI tests
+
+The UI tests use Playwright to drive the real app in a browser
+against hosted Supabase. They cover email sign-in, a wrong
+password, continuing as a guest, starting a session and coming
+back to it. `npm test` and CI do not run them.
+
+They read these keys from `packages/frontend/.env.local`:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_SECRET_KEY`
+
+Install the browser once, then run the tests:
+
+```bash
+npx -w frontend playwright install chromium
+npm run test:ui -w frontend
+```
+
+Playwright starts the dev server on port 3100 by itself. Setup
+creates a throwaway email account with one session, and teardown
+deletes it along with every guest user the tests made.
 
 ## Continuous Integration
 
