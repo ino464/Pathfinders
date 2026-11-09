@@ -345,7 +345,8 @@ They read these keys from `packages/frontend/.env.local`:
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SECRET_KEY`
 
-Install the browser once, then run the tests:
+They need Node 22 or newer. Install the browser once, then run
+the tests:
 
 ```bash
 npx -w frontend playwright install chromium
