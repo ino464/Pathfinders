@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 // The app writes JSX in .js files, which Next accepts and Vite
 // does not parse by default. Tests run in node; a component test
@@ -9,5 +9,8 @@ export default defineConfig({
     exclude: /node_modules/,
     lang: "jsx",
     jsx: { runtime: "automatic" }
+  },
+  test: {
+    exclude: [...configDefaults.exclude, "ui-test/**"]
   }
 });
