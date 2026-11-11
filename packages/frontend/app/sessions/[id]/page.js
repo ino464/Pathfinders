@@ -31,6 +31,10 @@ export default async function SessionPage({ params }) {
     <main>
       <Link href="/">All sessions</Link>
       <h1>{session.title ?? "Untitled session"}</h1>
+      {/* a plain link, so the browser downloads the file */}
+      <a href={`/sessions/${session.id}/export`} download>
+        Export
+      </a>
       {/* key resets the canvas for a new session */}
       <SessionGraph
         key={session.id}
