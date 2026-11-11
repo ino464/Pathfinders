@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:ui": "playwright test"
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.1.1",
@@ -23,6 +24,7 @@
     "@eslint/compat": "^1.4.1",
     "@eslint/eslintrc": "^3.3.7",
     "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.65.0",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "eslint": "^9.39.5",
