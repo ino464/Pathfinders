@@ -182,29 +182,53 @@ Each requirement's priority is the priority of the user story it traces to (see 
   database refuses node statuses other than `pending`,
   `accepted` and `rejected`, and the system refuses any link
   between nodes that would create a loop.
-- **Security:** The system shall use bcrypt for password
-  hashing.
+- **Security:** Passwords shall be handled by Supabase Auth. The
+  application shall not store or hash passwords itself.
 - **Security:** Server-side code shall read secrets (the
   Supabase keys and the Groq API key) from environment
   variables, not from source code.
 
 ### 4.2 Performance and Usability
 
-- Add performance requirements here.
-- Add usability requirements here.
+- **Performance:** A request to the language model shall time
+  out after 15 seconds and report an error.
+- **Performance:** Each session shall be limited to 10 idea
+  requests per 10 minutes, to control model cost and abuse.
+- **Usability:** A returning visitor with a valid session shall
+  go straight to the app without choosing a sign-in method again.
 
 ---
 
 ## 5. System Architecture
 
+Pathfinders has no separate backend service. The backend is
+server-side code inside a Next.js application, hosted on Vercel.
+Supabase provides the PostgreSQL database and authentication.
+Groq provides the language model used for idea generation.
+
 ### 5.1 REST API Endpoints
 
 | Method | URL              | Description                        |
 | ------ | ---------------- | ---------------------------------- |
-| GET    | `/api/resources` | Fetches a collection of resources. |
-| POST   | `/api/resources` | Creates a new resource.            |
+| POST   | `/api/expand`             | Generates ideas from a selected node and returns the new `{ nodes, edges }`. Needs a signed-in user.                                     |
+| GET    | `/sessions/[id]/export`   | Downloads a session as a JSON file. Format: `docs/session-export-format.md`.                                                             |
+| GET    | `/auth/callback`          | Finishes sign-in after an email link or Google redirect.                                                                                 |
+| POST   | `/api/auth/merge/start`   | Starts moving a guest's sessions into an account.                                                                                        |
+| POST   | `/api/auth/merge/finish`  | Finishes moving a guest's sessions into an account.                                                                                      |
 
-Add your planned endpoints based on your REST API design.
+`POST /api/expand` answers:
+
+| Status | When                                                                                                       |
+| ------ | ---------------------------------------------------------------------------------------------------------- |
+| `201`  | The ideas were added.                                                                                      |
+| `400`  | The body is not JSON, an id is not a UUID, or the instruction is not a string of at most 500 characters.   |
+| `401`  | Nobody is signed in.                                                                                       |
+| `404`  | The node is not in the session, is deleted, or the session belongs to another user.                        |
+| `429`  | The session reached the idea limit.                                                                        |
+| `502`  | The model request failed or its answer was not valid.                                                      |
+| `504`  | The model did not answer in time.                                                                          |
+| `500`  | Any other error.                                                                                           |
+
 
 ### 5.2 Database Schema
 
