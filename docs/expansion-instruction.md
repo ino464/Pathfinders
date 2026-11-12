@@ -3,14 +3,16 @@
 When a user expands a node, `/api/expand` sends the model the
 assembled context and then one trailing `user` message. This
 file defines that trailing message: the fixed instruction that
-says what to produce, and the optional direction the user types
-to steer the expansion. It is the spec for issue #52.
+says what to produce, the optional direction the user types to
+steer the expansion, and the session's preferences. It is the
+spec for issue #52. Decision 12 and Part 4 come from #102.
 
 Context assembly (`docs/context-assembly-cases.md`) adds no
 instruction text. Everything the model is told to do comes from
 this file.
 
-**Review status:** Cole accepted each decision on 2026-10-23.
+**Review status:** Cole accepted decisions 1 to 11 on
+2026-10-23. Decision 12 is proposed and waits for Cole.
 
 ## Decisions
 
@@ -27,6 +29,7 @@ this file.
 | 9   | Storage             | The direction is not stored. The children it produced carry its effect. No migration.                                                          | Accepted |
 | 10  | Single source       | The text below is the source of truth. A test reads it from this file and checks that the code builds the same text.                           | Accepted |
 | 11  | Tuning              | Wording and model settings such as temperature are tuned in the second PR. Each change is recorded in the tuning log below.                    | Accepted |
+| 12  | Preferences         | Part 4 lists the session's preferences last, as constraints on every idea. It keeps the format, as in decision 8. The system message stays.    | Proposed |
 
 ## Interface
 
@@ -34,10 +37,15 @@ this file.
   direction to `expandNode(sessionId, nodeId, direction)`. It
   passes `""` when there is no direction.
 - `lib/expand.js` exports
-  `buildInstruction(children, direction)`, which returns the
-  trailing message text. `children` are the target's child node
-  rows. `buildInstruction` filters, orders and caps them, and
-  collapses whitespace.
+  `buildInstruction(children, direction, preferences)`, which
+  returns the trailing message text. `children` are the target's
+  child node rows. `buildInstruction` filters, orders and caps
+  them, and collapses whitespace. `preferences` are the
+  session's preference rows. It defaults to `[]`.
+- `expandNode` passes the `preferences` from
+  `getExpansionInputs` to `buildInstruction`. It also passes
+  them to `assembleContext`, which still adds them as the first
+  `system` message (case 4 of `docs/context-assembly-cases.md`).
 - The `INSTRUCTION` constant is removed. Part 1 is exported as
   `BASE_INSTRUCTION`.
 - The existing test "ends on the instruction when the target is
@@ -47,11 +55,12 @@ this file.
 
 ## Instruction text
 
-The trailing message is built from up to three parts, joined by
+The trailing message is built from up to four parts, joined by
 one blank line. The test for decision 10 takes the first
 ` ```text ` block after each `### Part` heading. In those blocks
-`{child}` and `{direction}` are placeholders. The Part 2 line
-with `{child}` repeats once per listed child.
+`{child}`, `{direction}` and `{preference}` are placeholders.
+The Part 2 line with `{child}` repeats once per listed child.
+The Part 4 line with `{preference}` repeats once per preference.
 
 ### Part 1: always present
 
@@ -73,6 +82,14 @@ The user wants this direction: {direction}
 Follow it, but keep the answer format above.
 ```
 
+### Part 4: only when the session has preferences
+
+```text
+The user set these preferences for the whole session:
+- {preference}
+Every new idea must follow all of them, even where the ideas above do not. Keep the answer format above.
+```
+
 ## Rules
 
 1. The message list sent to the model is the assembled context
@@ -83,7 +100,7 @@ Follow it, but keep the answer format above.
    child. A child with a `deleted_at` value is not listed.
 4. Part 2 lists at most the 20 newest live children by
    `created_at`, then `id`. It prints them oldest first.
-5. In Part 2 and Part 3, each run of whitespace, newlines
+5. In Parts 2, 3 and 4, each run of whitespace, newlines
    included, becomes one space.
 6. Part 3 is present only when the trimmed direction is not
    empty.
@@ -99,6 +116,10 @@ Follow it, but keep the answer format above.
     case. Otherwise the expansion fails with 502 and nothing is
     written.
 11. The direction is never passed to `addChildren`.
+12. Part 4 is present only when the session has at least one
+    preference. It lists every preference, oldest first by
+    `created_at`, then `id`.
+13. Part 4 is always last when it is present.
 
 ## Cases
 
@@ -177,10 +198,50 @@ Target `A` has one child with content `"Walk\n- Drive"`.
 
 Expected: Part 2 lists it as `- Walk - Drive`.
 
+### Case 12: preferences only
+
+Target `A` has no children and no direction. The session has
+preferences `P2` "Nothing greasy" (`t2`) and `P1` "Keep it
+cheap" (`t1`).
+
+Expected: Part 1, a blank line, then Part 4 listing `P1` then
+`P2`.
+
+### Case 13: every part
+
+As case 5, with the preferences of case 12.
+
+Expected: Part 1, Part 2, Part 3, Part 4, in that order, each
+separated by one blank line.
+
 ## Tuning log
 
-Empty until the second PR. Each entry records the date, what
-changed, the sample graphs it was tried on, and why.
+Each entry records the date, what changed, the sample graphs it
+was tried on, and why.
+
+### 2026-11-12: preferences in the trailing message (#102)
+
+- **Change:** added Part 4, rules 12 and 13, and decision 12.
+  Parts 1 to 3 and the model settings did not change. The model
+  is `openai/gpt-oss-120b` on Groq.
+- **Why:** the preference reached the model only as a bare
+  `system` message at the start. The trailing message, which the
+  model reads last, said to build on the target, and the target
+  did not follow the preference.
+- **Sample graph:** root "What should we eat tonight?", then the
+  target "Crispy fried pork belly tacos with extra cheese and
+  sour cream". One preference: "Nothing that greasy, maybe
+  dessert?". The target had no live children at the start of
+  each run.
+- **Before (main), 2 runs:** run 1 gave grilled salmon, mushroom
+  crepes with béchamel, and beef bibimbap. Run 2 gave three pork
+  belly dishes. Neither run gave a dessert.
+- **After, 3 runs:** run 1 gave mango coconut sorbet, a quinoa
+  salad and baked apples. Run 2 gave lemon sorbet, apple crumble
+  and chocolate avocado mousse. Run 3 had the direction
+  "something spicy" and gave a spicy mango sorbet, a chipotle
+  chocolate mousse and chili-honey pineapple. All 9 ideas follow
+  the preference, and run 3 also follows the direction.
 
 ## AI usage
 

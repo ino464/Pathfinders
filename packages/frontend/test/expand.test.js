@@ -60,6 +60,19 @@ const part3 = (direction) =>
   `The user wants this direction: ${direction}\n` +
   "Follow it, but keep the answer format above.";
 
+const part4 = (...contents) =>
+  [
+    "The user set these preferences for the whole session:",
+    ...contents.map((c) => `- ${c}`),
+    "Every new idea must follow all of them, even where the ideas above do not. Keep the answer format above."
+  ].join("\n");
+
+const pref = (id, content, createdAt) => ({
+  id,
+  content,
+  created_at: createdAt
+});
+
 // Root R with one child A, both created well before NOW.
 function smallGraph() {
   return {
@@ -322,6 +335,11 @@ describe("buildInstruction (#52)", () => {
     node("C2", "Child two", "2026-10-18T10:00:02Z")
   ];
 
+  const twoPreferences = () => [
+    pref("P2", "Nothing greasy", "2026-10-18T09:00:02Z"),
+    pref("P1", "Keep it cheap", "2026-10-18T09:00:01Z")
+  ];
+
   test("case 1: is only part 1 with no children and no direction", () => {
     expect(buildInstruction([], "")).toBe(BASE_INSTRUCTION);
   });
@@ -455,6 +473,60 @@ describe("buildInstruction (#52)", () => {
     );
   });
 
+  test("case 12: adds the preferences after part 1, oldest first", () => {
+    expect(buildInstruction([], "", twoPreferences())).toBe(
+      `${BASE_INSTRUCTION}\n\n${part4("Keep it cheap", "Nothing greasy")}`
+    );
+  });
+
+  test("case 13: puts the preferences last, after the direction", () => {
+    expect(
+      buildInstruction(
+        twoChildren(),
+        "cheaper options",
+        twoPreferences()
+      )
+    ).toBe(
+      `${BASE_INSTRUCTION}\n\n` +
+        `${part2("Child one", "Child two")}\n\n` +
+        `${part3("cheaper options")}\n\n` +
+        part4("Keep it cheap", "Nothing greasy")
+    );
+  });
+
+  test("rule 12: leaves part 4 out when there are no preferences", () => {
+    expect(buildInstruction([], "", [])).toBe(BASE_INSTRUCTION);
+  });
+
+  test("rule 12: orders preferences with the same created_at by id", () => {
+    const preferences = [
+      pref("P2", "Second", "2026-10-18T09:00:00Z"),
+      pref("P1", "First", "2026-10-18T09:00:00Z")
+    ];
+
+    expect(buildInstruction([], "", preferences)).toBe(
+      `${BASE_INSTRUCTION}\n\n${part4("First", "Second")}`
+    );
+  });
+
+  test("rule 5: collapses whitespace runs in a preference to one space", () => {
+    const preferences = [
+      pref("P1", "No\n- cars  at\tall", "2026-10-18T09:00:00Z")
+    ];
+
+    expect(buildInstruction([], "", preferences)).toBe(
+      `${BASE_INSTRUCTION}\n\n${part4("No - cars at all")}`
+    );
+  });
+
+  test("does not change the caller's preference array", () => {
+    const preferences = twoPreferences();
+
+    buildInstruction([], "", preferences);
+
+    expect(preferences.map((p) => p.id)).toEqual(["P2", "P1"]);
+  });
+
   describe("decision 10: matches docs/expansion-instruction.md", () => {
     const doc = readFileSync(
       new URL(
@@ -474,33 +546,46 @@ describe("buildInstruction (#52)", () => {
         return match[1].replace(/\r\n/g, "\n");
       });
 
-    test("the doc has three part blocks", () => {
-      expect(blocks).toHaveLength(3);
+    test("the doc has four part blocks", () => {
+      expect(blocks).toHaveLength(4);
     });
 
     test("BASE_INSTRUCTION equals the part 1 block", () => {
       expect(BASE_INSTRUCTION).toBe(blocks[0]);
     });
 
-    test("builds the same text as the doc for two children and a direction", () => {
-      const [first, second, third] = blocks;
-      const childLines = (contents) =>
-        second
+    test("builds the same text as the doc for children, a direction and preferences", () => {
+      const [first, second, third, fourth] = blocks;
+      const repeatLines = (block, placeholder, contents) =>
+        block
           .split("\n")
           .flatMap((line) =>
-            line.includes("{child}")
-              ? contents.map((c) => line.replace("{child}", c))
+            line.includes(placeholder)
+              ? contents.map((c) =>
+                  line.replace(placeholder, c)
+                )
               : [line]
           )
           .join("\n");
       const expected = [
         first,
-        childLines(["Child one", "Child two"]),
-        third.replace("{direction}", "cheaper options")
+        repeatLines(second, "{child}", [
+          "Child one",
+          "Child two"
+        ]),
+        third.replace("{direction}", "cheaper options"),
+        repeatLines(fourth, "{preference}", [
+          "Keep it cheap",
+          "Nothing greasy"
+        ])
       ].join("\n\n");
 
       expect(
-        buildInstruction(twoChildren(), "cheaper options")
+        buildInstruction(
+          twoChildren(),
+          "cheaper options",
+          twoPreferences()
+        )
       ).toBe(expected);
     });
   });
@@ -602,6 +687,33 @@ describe("expandNode instruction (#52)", () => {
       { role: "user", content: "Root prompt" },
       { role: "user", content: BASE_INSTRUCTION }
     ]);
+  });
+
+  test("#102: the trailing message carries the preference text", async () => {
+    fake.inputs = {
+      ...graphWithGrandchildren(),
+      preferences: [
+        pref(
+          "P1",
+          "Nothing that greasy, maybe dessert?",
+          "2026-10-18T09:00:00Z"
+        )
+      ]
+    };
+
+    await expandNode("s1", "A");
+
+    const [messages] = fake.completion.mock.calls[0];
+    expect(messages[0]).toEqual({
+      role: "system",
+      content: "Nothing that greasy, maybe dessert?"
+    });
+    expect(messages.at(-1)).toEqual({
+      role: "user",
+      content:
+        `${BASE_INSTRUCTION}\n\n${part2("Idea B")}\n\n` +
+        part4("Nothing that greasy, maybe dessert?")
+    });
   });
 
   test("rule 11: never passes the direction to addChildren", async () => {
