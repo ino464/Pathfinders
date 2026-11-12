@@ -31,7 +31,11 @@ function byCreatedAtThenId(a, b) {
   return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }
 
-export function buildInstruction(children, direction) {
+export function buildInstruction(
+  children,
+  direction,
+  preferences = []
+) {
   const parts = [BASE_INSTRUCTION];
 
   const listed = children
@@ -54,6 +58,20 @@ export function buildInstruction(children, direction) {
     parts.push(
       `The user wants this direction: ${steer}\n` +
         "Follow it, but keep the answer format above."
+    );
+  }
+
+  // Part 4 comes last so the model reads the standing
+  // constraints after the path and the direction (#102).
+  if (preferences.length > 0) {
+    parts.push(
+      [
+        "The user set these preferences for the whole session:",
+        ...[...preferences]
+          .sort(byCreatedAtThenId)
+          .map((p) => `- ${collapseWhitespace(p.content)}`),
+        "Every new idea must follow all of them, even where the ideas above do not. Keep the answer format above."
+      ].join("\n")
     );
   }
 
@@ -169,7 +187,7 @@ export async function expandNode(
   const children = nodes.filter((n) => childIds.has(n.id));
   messages.push({
     role: "user",
-    content: buildInstruction(children, direction)
+    content: buildInstruction(children, direction, preferences)
   });
 
   let text;
