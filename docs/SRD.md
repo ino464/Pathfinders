@@ -23,6 +23,7 @@
 
 | Last Date Changed | Who           | What Was Changed                                                                                                                                                                        |
 | ----------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-12        | Ethan Ikenaga | Amended the SRD to match the implementation (#76): fixed the section 3 table, updated requirements for like/dislike flags, soft delete, and session rename, wrote sections 4.2, 5, and 7, listed export as implemented, and filled in the traceability matrix with real files. |
 | 2026-10-13        | Ethan Ikenaga | Replaced template workout requirements in section 3 with functional requirements traced to US-01 to US-12; rebuilt the section 8 traceability matrix; changed MySQL to Postgres in 5.2. |
 | 2026-09-25        | Ethan Ikenaga | Drafted the SRD and entered user stories US-01 to US-12.                                                                                                                                |
 
@@ -143,7 +144,7 @@ User stories follow this format:
 
 ### 2.2 Admin Features
 
-Add administrator user stories here, if applicable.
+There are no Admin features currently in Pathfinders
 
 ---
 
@@ -151,20 +152,24 @@ Add administrator user stories here, if applicable.
 
 The system shall:
 
-| ID    | Requirement                                                                                                    | Priority |
-| ----- | -------------------------------------------------------------------------------------------------------------- | -------: |
-| FR-01 | The system shall suggest and automatically create new branches based on the context of a selected node.        |    US-01 | 1   |
-| FR-02 | The system shall allow users to add new nodes to a selected chat branch, using that branch's existing context. |    US-02 | 1   |
-| FR-03 | The system shall let users view their full chat history and switch between idea branches.                      |    US-03 | 1   |
-| FR-04 | The system shall allow returning users to log in and resume their previous brainstorming work.                 |    US-04 | 2   |
-| FR-05 | The system shall allow users to accept or reject nodes and shall record each decision.                         |    US-05 | 2   |
-| FR-06 | The system shall allow users to return to a previous node in order to develop that idea in a new direction.    |    US-06 | 2   |
-| FR-07 | The system shall allow users to delete or deactivate branches and chats.                                       |    US-07 | 2   |
-| FR-08 | The system shall allow users to enter preferences and shall apply them throughout the brainstorming session.   |    US-08 | 3   |
-| FR-09 | The system shall allow users to rename chats.                                                                  |    US-09 | 3   |
-| FR-10 | The system shall allow users to export a brainstorm graph so it can be shared.                                 |    US-10 | 3   |
-| FR-11 | The system shall allow users to import a brainstorm graph that another user exported.                          |    US-11 | 3   |
-| FR-12 | The system shall allow users to select two or more nodes and merge them into a combined node.                  |    US-12 | 4   |
+Each requirement's priority is the priority of the user story it traces to (see [2.1](#21-user-features)).
+
+| ID    | Requirement                                                                                                    | User Story                 |
+| ----- | -------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| FR-01 | The system shall suggest and automatically create new branches based on the context of a selected node.        | [US-01](#21-user-features) |
+| FR-02 | The system shall allow users to add new nodes to a selected chat branch, using that branch's existing context. | [US-02](#21-user-features) |
+| FR-03 | The system shall let users view their full chat history and switch between idea branches.                      | [US-03](#21-user-features) |
+| FR-04 | The system shall allow returning users to log in and resume their previous brainstorming work.                 | [US-04](#21-user-features) |
+| FR-05 | The system shall allow users to accept or reject nodes and shall record each decision.                         | [US-05](#21-user-features) |
+| FR-06 | The system shall allow users to return to a previous node in order to develop that idea in a new direction.    | [US-06](#21-user-features) |
+| FR-07 | The system shall allow users to delete or deactivate branches and chats.                                       | [US-07](#21-user-features) |
+| FR-08 | The system shall allow users to enter preferences and shall apply them throughout the brainstorming session.   | [US-08](#21-user-features) |
+| FR-09 | The system shall allow users to rename chats.                                                                  | [US-09](#21-user-features) |
+| FR-10 | The system shall allow users to export a brainstorm graph so it can be shared.                                 | [US-10](#21-user-features) |
+| FR-11 | The system shall allow users to import a brainstorm graph that another user exported.                          | [US-11](#21-user-features) |
+| FR-12 | The system shall allow users to select two or more nodes and merge them into a combined node.                  | [US-12](#21-user-features) |
+
+---
 
 ---
 
@@ -173,11 +178,15 @@ The system shall:
 ### 4.1 Data Integrity and Security
 
 - **Integrity:** The system shall handle errors and invalid data
-  appropriately.
+  appropriately. Invalid requests get a `400` response, the
+  database refuses node statuses other than `pending`,
+  `accepted` and `rejected`, and the system refuses any link
+  between nodes that would create a loop.
 - **Security:** The system shall use bcrypt for password
   hashing.
-- **Security:** The system shall use environment variables for
-  database credentials.
+- **Security:** Server-side code shall read secrets (the
+  Supabase keys and the Groq API key) from environment
+  variables, not from source code.
 
 ### 4.2 Performance and Usability
 
