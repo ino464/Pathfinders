@@ -1,9 +1,15 @@
 import { orderedContext } from "./context-assembly";
-import { getExpansionInputs } from "./graph-data";
+import {
+  addChatTurn,
+  countChatTurnsSince,
+  getExpansionInputs
+} from "./graph-data";
 import { requestCompletion } from "./groq";
 
 export const MODEL = "openai/gpt-oss-120b";
 export const TIMEOUT_MS = 15_000;
+export const CHAT_LIMIT = 30;
+export const CHAT_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 
 export const CHAT_INSTRUCTION =
   "You are talking with a user about their brainstorm. The " +
@@ -110,6 +116,17 @@ export async function chatAboutNodes(
       );
     }
   }
+
+  const since = new Date(
+    Date.now() - CHAT_LIMIT_WINDOW_MS
+  ).toISOString();
+  if ((await countChatTurnsSince(since)) >= CHAT_LIMIT) {
+    throw new ChatError(
+      429,
+      "Too many chat messages. Try again later."
+    );
+  }
+  await addChatTurn(sessionId);
 
   const messages = buildChatMessages(
     inputs,

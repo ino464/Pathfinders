@@ -10,12 +10,20 @@ import {
 const fake = vi.hoisted(() => ({
   inputs: null,
   completion: null,
-  addChildren: vi.fn()
+  addChildren: vi.fn(),
+  turnCount: 0,
+  countSince: vi.fn(),
+  addChatTurn: vi.fn()
 }));
 
 vi.mock("../lib/graph-data", () => ({
   getExpansionInputs: async () => fake.inputs,
-  addChildren: (...args) => fake.addChildren(...args)
+  addChildren: (...args) => fake.addChildren(...args),
+  countChatTurnsSince: async (since) => {
+    fake.countSince(since);
+    return fake.turnCount;
+  },
+  addChatTurn: async (...args) => fake.addChatTurn(...args)
 }));
 
 vi.mock("../lib/groq", () => ({
@@ -24,6 +32,8 @@ vi.mock("../lib/groq", () => ({
 
 const {
   CHAT_INSTRUCTION,
+  CHAT_LIMIT,
+  CHAT_LIMIT_WINDOW_MS,
   MODEL,
   OUTLINE_INTRO,
   TIMEOUT_MS,
@@ -82,6 +92,9 @@ beforeEach(() => {
   fake.inputs = graph();
   fake.completion = answerWith("Kyoto is lovely then.");
   fake.addChildren.mockClear();
+  fake.turnCount = 0;
+  fake.countSince.mockClear();
+  fake.addChatTurn.mockClear();
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -225,6 +238,69 @@ describe("chatAboutNodes", () => {
       chatAboutNodes("s1", ["B"], [], "Why?"),
       502
     );
+  });
+});
+
+describe("chat limit", () => {
+  const NOW = Date.parse("2026-11-13T12:00:00Z");
+
+  beforeEach(() => {
+    vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("counts the user's turns of the last hour in every session", async () => {
+    await chatAboutNodes("s1", ["B"], [], "Why?");
+
+    expect(fake.countSince).toHaveBeenCalledWith(
+      new Date(NOW - CHAT_LIMIT_WINDOW_MS).toISOString()
+    );
+    expect(CHAT_LIMIT_WINDOW_MS).toBe(60 * 60 * 1000);
+  });
+
+  test("records the turn before asking the model", async () => {
+    fake.completion = vi.fn(async () => {
+      expect(fake.addChatTurn).toHaveBeenCalledWith("s1");
+      return "Reply.";
+    });
+
+    await chatAboutNodes("s1", ["B"], [], "Why?");
+
+    expect(fake.addChatTurn).toHaveBeenCalledTimes(1);
+  });
+
+  test("allows the last turn under the limit", async () => {
+    fake.turnCount = CHAT_LIMIT - 1;
+
+    await expect(
+      chatAboutNodes("s1", ["B"], [], "Why?")
+    ).resolves.toEqual({ reply: "Kyoto is lovely then." });
+  });
+
+  test("answers 429 once the user reaches the limit", async () => {
+    fake.turnCount = CHAT_LIMIT;
+
+    await expectStatus(
+      chatAboutNodes("s1", ["B"], [], "Why?"),
+      429
+    );
+    expect(fake.addChatTurn).not.toHaveBeenCalled();
+    expect(fake.completion).not.toHaveBeenCalled();
+  });
+
+  test("is 30 turns", () => {
+    expect(CHAT_LIMIT).toBe(30);
+  });
+
+  test("does not count a turn for a node that is not found", async () => {
+    await expectStatus(
+      chatAboutNodes("s1", ["missing"], [], "Why?"),
+      404
+    );
+    expect(fake.addChatTurn).not.toHaveBeenCalled();
   });
 });
 
