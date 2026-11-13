@@ -79,8 +79,9 @@ Notes on the functions:
   session page (#53) shows the order that expansion uses.
 - `removePreference` deletes the row. The `preferences` table
   has no `deleted_at` column.
-- `addChildren` writes the children of one node and their edges
-  through the `add_children` database function, in one
+- `addChildren` writes the children of one or two parent nodes
+  and an edge from every parent to every child through the
+  `add_children_to_parents` database function, in one
   transaction. If any insert fails, nothing is written, so a
   failed expansion cannot leave a node without a parent.
 - Because everything goes through these functions, the canvas
@@ -169,13 +170,19 @@ another user's session gets the same `404` as for a node that
 does not exist, so the answer does not show that the session
 exists.
 
-| Status | When                                                                                                                     |
-| ------ | ------------------------------------------------------------------------------------------------------------------------ |
-| `201`  | The children were added. The body is `{ nodes, edges }`.                                                                 |
-| `400`  | The body is not JSON, `sessionId` or `nodeId` is not a UUID, or `instruction` is not a string of at most 500 characters. |
-| `401`  | Nobody is signed in: `Sign in to expand ideas.`                                                                          |
-| `404`  | The node is not in the session, is deleted, or the session belongs to another user: `Node not found in this session.`    |
-| `429`  | The session hit the expansion limit.                                                                                     |
-| `502`  | The model request failed or its answer was not valid.                                                                    |
-| `504`  | The model did not answer in time.                                                                                        |
-| `500`  | Any other error. The body has no details.                                                                                |
+The body is `{ sessionId, nodeIds, instruction? }`. `nodeIds` is
+a list of one or two distinct UUIDs. With two nodes, the new
+ideas combine both branches and each new node has both nodes as
+parents (#73). The older `nodeId` is still accepted in place of
+`nodeIds`, but a body with both is refused.
+
+| Status | When                                                                                                                                                                                                |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `201`  | The children were added. The body is `{ nodes, edges }`.                                                                                                                                            |
+| `400`  | The body is not JSON, `sessionId` is not a UUID, `nodeIds` is not one or two distinct UUIDs (or `nodeId` is not a UUID), both are sent, or `instruction` is not a string of at most 500 characters. |
+| `401`  | Nobody is signed in: `Sign in to expand ideas.`                                                                                                                                                     |
+| `404`  | A node is not in the session, is deleted, or the session belongs to another user: `Node not found in this session.`                                                                                 |
+| `429`  | The session hit the expansion limit.                                                                                                                                                                |
+| `502`  | The model request failed or its answer was not valid.                                                                                                                                               |
+| `504`  | The model did not answer in time.                                                                                                                                                                   |
+| `500`  | Any other error. The body has no details.                                                                                                                                                           |
