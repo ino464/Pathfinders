@@ -112,20 +112,25 @@ export function SessionGraph({ graph, sessionId }) {
     [nodes, selectedIds, highlight]
   );
 
-  const canvasEdges = useMemo(
-    () =>
-      edges.map((edge) => {
-        if (!highlight) return edge;
-        const on = highlight.edgeIds.has(edge.id);
-        // a highlighted edge is drawn above the faded ones
-        return {
+  // Highlighted edges come last, so React Flow draws them above
+  // the faded edges. A zIndex would also lift them above the
+  // nodes and draw a line across an idea's text.
+  const canvasEdges = useMemo(() => {
+    if (!highlight) return edges;
+    const faded = [];
+    const highlighted = [];
+    for (const edge of edges) {
+      if (highlight.edgeIds.has(edge.id)) {
+        highlighted.push({
           ...edge,
-          className: on ? "is-highlighted" : "is-faded",
-          zIndex: on ? 1 : 0
-        };
-      }),
-    [edges, highlight]
-  );
+          className: "is-highlighted"
+        });
+      } else {
+        faded.push({ ...edge, className: "is-faded" });
+      }
+    }
+    return [...faded, ...highlighted];
+  }, [edges, highlight]);
 
   function resetForms(ids) {
     const single =
