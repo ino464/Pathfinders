@@ -126,7 +126,7 @@ describe("expandNode", () => {
     expect(result).toEqual({ nodes: [], edges: [] });
     expect(fake.addChildren).toHaveBeenCalledWith(
       "s1",
-      "A",
+      ["A"],
       ideas()
     );
   });
@@ -229,10 +229,11 @@ describe("expandNode", () => {
 
     await expandNode("s1", "A");
 
-    expect(fake.addChildren).toHaveBeenCalledWith("s1", "A", [
-      ...ideas(CHILD_COUNT - 1),
-      longest
-    ]);
+    expect(fake.addChildren).toHaveBeenCalledWith(
+      "s1",
+      ["A"],
+      [...ideas(CHILD_COUNT - 1), longest]
+    );
   });
 
   test("answers 404 for a node that is not in the session", async () => {
@@ -264,6 +265,110 @@ describe("expandNode", () => {
     });
 
     await expectStatus(expandNode("s1", "A"), 502);
+    expect(fake.addChildren).not.toHaveBeenCalled();
+  });
+});
+
+// Issue #73: the user selects two nodes and the new ideas
+// become children of both.
+describe("expandNode from two nodes (#73)", () => {
+  // R → A and R → B, A → "Child of A", B → "Child of B", and
+  // one child "Shared child" that has both A and B as parents.
+  function twoSiblingGraph() {
+    return {
+      nodes: [
+        node("R", "Root prompt", "2026-10-18T10:00:00Z"),
+        node("A", "Idea A", "2026-10-18T10:00:01Z"),
+        node("B", "Idea B", "2026-10-18T10:00:02Z"),
+        node("AC", "Child of A", "2026-10-18T10:00:03Z"),
+        node("BC", "Child of B", "2026-10-18T10:00:04Z"),
+        node("S", "Shared child", "2026-10-18T10:00:05Z")
+      ],
+      edges: [
+        edge("R", "A"),
+        edge("R", "B"),
+        edge("A", "AC"),
+        edge("B", "BC"),
+        edge("A", "S"),
+        edge("B", "S")
+      ],
+      preferences: []
+    };
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    fake.inputs = twoSiblingGraph();
+    fake.completion = answerWith({ ideas: ideas() });
+    fake.addChildren = vi.fn(async () => ({
+      nodes: [],
+      edges: []
+    }));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  test("writes the ideas as children of both nodes", async () => {
+    await expandNode("s1", ["A", "B"]);
+
+    expect(fake.addChildren).toHaveBeenCalledWith(
+      "s1",
+      ["A", "B"],
+      ideas()
+    );
+  });
+
+  test("sends the union of both branches as context", async () => {
+    await expandNode("s1", ["A", "B"]);
+
+    const [messages] = fake.completion.mock.calls[0];
+    expect(messages.slice(0, 3)).toEqual([
+      { role: "user", content: "Root prompt" },
+      { role: "assistant", content: "Idea A" },
+      { role: "assistant", content: "Idea B" }
+    ]);
+    expect(messages).toHaveLength(4);
+    expect(messages[3].role).toBe("user");
+  });
+
+  test("lists the children of both nodes once in the do-not-repeat part", async () => {
+    await expandNode("s1", ["A", "B"]);
+
+    const [messages] = fake.completion.mock.calls[0];
+    expect(messages[3].content).toContain(
+      part2("Child of A", "Child of B", "Shared child")
+    );
+  });
+
+  test("a list of one id behaves as a single id", async () => {
+    await expandNode("s1", "A");
+    await expandNode("s1", ["A"]);
+
+    const [single, listed] = fake.completion.mock.calls;
+    expect(listed).toEqual(single);
+    expect(fake.addChildren.mock.calls[1]).toEqual(
+      fake.addChildren.mock.calls[0]
+    );
+  });
+
+  test("answers 404 when one node is not in the session", async () => {
+    // A node from another session is not in this session's
+    // nodes, so it is the same as a missing one.
+    await expectStatus(expandNode("s1", ["A", "missing"]), 404);
+    expect(fake.completion).not.toHaveBeenCalled();
+    expect(fake.addChildren).not.toHaveBeenCalled();
+  });
+
+  test("answers 404 when one node is deleted", async () => {
+    fake.inputs.nodes[2].deleted_at = "2026-10-18T11:00:00Z";
+
+    await expectStatus(expandNode("s1", ["A", "B"]), 404);
+    expect(fake.completion).not.toHaveBeenCalled();
     expect(fake.addChildren).not.toHaveBeenCalled();
   });
 });
@@ -724,7 +829,7 @@ describe("expandNode instruction (#52)", () => {
     expect(fake.addChildren).toHaveBeenCalledTimes(1);
     expect(fake.addChildren).toHaveBeenCalledWith(
       "s1",
-      "A",
+      ["A"],
       ideas()
     );
   });
