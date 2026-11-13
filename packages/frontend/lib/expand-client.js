@@ -1,13 +1,23 @@
 const EXPAND_URL = "/api/expand";
 
-// Calls the expansion endpoint from the canvas and returns its
-// saved nodes and edges. Error responses become ordinary Errors
-// that the interface can show to the user.
-export async function requestExpansion(sessionId, nodeId) {
+// Asks the server for new ideas from one or two selected nodes
+// and returns the saved nodes and edges (#73, #94). instruction
+// is the user's optional direction; an empty one is left out.
+// Error responses become ordinary Errors that the interface can
+// show to the user.
+export async function requestBrainstorm(
+  sessionId,
+  nodeIds,
+  instruction = ""
+) {
+  const request = { sessionId, nodeIds };
+  const direction = instruction.trim();
+  if (direction !== "") request.instruction = direction;
+
   const response = await fetch(EXPAND_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sessionId, nodeId })
+    body: JSON.stringify(request)
   });
   const body = await response.json().catch(() => ({}));
 
