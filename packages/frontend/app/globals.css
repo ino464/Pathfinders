@@ -36,6 +36,13 @@ h1 {
   margin: 0;
 }
 
+/* one line, so a long selection does not move the canvas */
+.session-graph__selection > p:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .session-graph__selection form {
   display: flex;
   gap: 0.5rem;
