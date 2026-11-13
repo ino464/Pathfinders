@@ -303,7 +303,15 @@ Deleted sessions and nodes are marked, not removed.
 
 ## 9. Appendices
 
-Add supporting materials here.
+- `docs/UML.md`: data model and the reasoning behind it
+- `docs/backend-architecture.md`: backend decisions, data access
+  layer, access control
+- `docs/auth.md`: sign-in methods and guest merge
+- `docs/session-export-format.md`: export file format
+- `docs/context-assembly-cases.md` and
+  `docs/expansion-instruction.md`: how ideas are generated
+- `docs/images/`: sequence diagrams for sign-up, sign-in and
+  backend calls
 
 ---
 
