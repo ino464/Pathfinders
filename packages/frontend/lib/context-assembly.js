@@ -146,17 +146,7 @@ function toMessages(ordered, root, preferences) {
   return messages;
 }
 
-// Builds the model's message list for expanding one or more nodes.
-// targetNodeIds is one id, or a list of ids (the nodes the user
-// selected); the context is the union of all their ancestors.
-// Pure function: no Supabase, Next, or React imports.
-// See docs/context-assembly-cases.md.
-export function assembleContext(
-  nodes,
-  edges,
-  targetNodeIds,
-  preferences = []
-) {
+export function orderedContext(nodes, edges, targetNodeIds) {
   // a single id is the same as a list of one
   const targetIds = Array.isArray(targetNodeIds)
     ? targetNodeIds
@@ -189,6 +179,26 @@ export function assembleContext(
     parentsOf,
     childrenOf,
     nodeById
+  );
+
+  return { ordered, root };
+}
+
+// Builds the model's message list for expanding one or more nodes.
+// targetNodeIds is one id, or a list of ids (the nodes the user
+// selected); the context is the union of all their ancestors.
+// Pure function: no Supabase, Next, or React imports.
+// See docs/context-assembly-cases.md.
+export function assembleContext(
+  nodes,
+  edges,
+  targetNodeIds,
+  preferences = []
+) {
+  const { ordered, root } = orderedContext(
+    nodes,
+    edges,
+    targetNodeIds
   );
 
   return toMessages(ordered, root, preferences);
