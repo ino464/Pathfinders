@@ -19,7 +19,7 @@ decision.
 
 | #   | Decision             | Choice                                                                                                                                      | Decided by | Status                     |
 | --- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | -------------------------- |
-| 1a  | Inputs               | `(nodes, edges, targetNodeId, preferences)`. No `rootPrompt` argument.                                                                      | Tyler      | Accepted (Ethan)           |
+| 1a  | Inputs               | `(nodes, edges, targetNodeIds, preferences)`. `targetNodeIds` is one id or a list of ids (#73). No `rootPrompt` argument.                   | Tyler      | Accepted (Ethan)           |
 | 1b  | Return value         | An array of `{ role, content }` messages.                                                                                                   | Tyler      | Accepted (Ethan)           |
 | 1c  | Roles                | The root is `user`. Each other node is `assistant`. One message per node.                                                                   | Tyler      | Accepted (Ethan)           |
 | 2   | Instruction text     | Context assembly adds none. Issue #32 adds its own.                                                                                         | Tyler      | Accepted (Ethan)           |
@@ -44,8 +44,9 @@ These rules restate the decisions in the form the cases use.
    `user`.
 3. Each other node has the role `assistant`.
 4. Each `content` value is the node `content`, unchanged.
-5. The output contains the target and each ancestor of the
-   target, one time each. The target is the last message.
+5. The output contains each target and each ancestor of each
+   target, one time each. The last message is the target that
+   rule 6 puts last.
 6. A parent comes before its children. When two nodes can come
    next, the node with the lower `created_at` comes first. If
    `created_at` is equal, the node with the lower `id` comes
@@ -58,13 +59,14 @@ These rules restate the decisions in the form the cases use.
 10. A node with a `deleted_at` value is a cut. The output
     excludes it and each node that reaches the target only
     through it.
-11. The function throws if the target has a `deleted_at` value,
-    or if no path from the root to the target remains.
+11. The function throws if a target has a `deleted_at` value, if
+    no path from the root to a target remains, or if the list of
+    targets is empty.
 12. The function has no size limit. It does not truncate.
 13. The function does not read `status`.
 
-The target is the last message, so the array ends with an
-`assistant` message whenever the target is not the root. The
+The last message is a target, so the array ends with an
+`assistant` message whenever that target is not the root. The
 caller appends its own trailing `user` message. Issue #32 has to
 do this rather than merely choosing to: chat completion APIs
 expect the final message to come from the user, and a trailing
