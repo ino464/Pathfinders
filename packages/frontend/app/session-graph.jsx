@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Background,
   Controls,
@@ -12,9 +12,11 @@ import {
   useNodesState
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { requestExpansion } from "../lib/expand-client";
+import { requestBrainstorm } from "../lib/expand-client";
+import { highlightSelection } from "../lib/graph-highlight";
 import { layoutGraph } from "../lib/graph-layout";
 import { FLAGS, nextFlagStatus } from "../lib/node-status";
+import { useNodeSelection } from "./use-node-selection";
 import {
   addManualChildAction,
   editNodeAction,
@@ -73,52 +75,93 @@ export function SessionGraph({ graph, sessionId }) {
   const [edges, setEdges, onEdgesChange] = useEdgesState(
     canvasGraph.edges
   );
-  const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [isExpanding, setIsExpanding] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [nodeText, setNodeText] = useState("");
   const [childText, setChildText] = useState("");
   const [error, setError] = useState(null);
-  const selectedNode = nodes.find(
-    (node) => node.id === selectedNodeId
-  );
+  const { selectedIds, clickNode, clear } =
+    useNodeSelection(resetForms);
+  const selectedNodes = selectedIds
+    .map((id) => nodes.find((node) => node.id === id))
+    .filter(Boolean);
+  // the single-node actions need exactly one selected node
+  const selectedNode =
+    selectedNodes.length === 1 ? selectedNodes[0] : null;
   const isBusy = isExpanding || isSaving;
 
-  const selectNode = useCallback(
-    (_, selectedNode) => {
-      setSelectedNodeId(selectedNode.id);
-      setNodeText(selectedNode.data.content);
-      setChildText("");
-      setError(null);
-      setNodes((currentNodes) =>
-        currentNodes.map((node) => ({
-          ...node,
-          selected: node.id === selectedNode.id
-        }))
-      );
-    },
-    [setNodes]
+  // the selection's ancestors and children stay clear, and the
+  // other ideas and edges fade
+  const highlight = useMemo(
+    () => highlightSelection(edges, selectedIds),
+    [edges, selectedIds]
   );
 
-  const clearSelection = useCallback(() => {
-    setSelectedNodeId(null);
-    setNodeText("");
+  // React Flow draws a node as selected from its `selected`
+  // field, so the field follows the selection hook
+  const canvasNodes = useMemo(
+    () =>
+      nodes.map((node) => ({
+        ...node,
+        selected: selectedIds.includes(node.id),
+        className:
+          highlight && !highlight.nodeIds.has(node.id)
+            ? "is-faded"
+            : undefined
+      })),
+    [nodes, selectedIds, highlight]
+  );
+
+  // Highlighted edges come last, so React Flow draws them above
+  // the faded edges. A zIndex would also lift them above the
+  // nodes and draw a line across an idea's text.
+  const canvasEdges = useMemo(() => {
+    if (!highlight) return edges;
+    const faded = [];
+    const highlighted = [];
+    for (const edge of edges) {
+      if (highlight.edgeIds.has(edge.id)) {
+        highlighted.push({
+          ...edge,
+          className: "is-highlighted"
+        });
+      } else {
+        faded.push({ ...edge, className: "is-faded" });
+      }
+    }
+    return [...faded, ...highlighted];
+  }, [edges, highlight]);
+
+  function resetForms(ids) {
+    const single =
+      ids.length === 1
+        ? nodes.find((node) => node.id === ids[0])
+        : null;
+    setNodeText(single?.data.content ?? "");
     setChildText("");
     setError(null);
-    setNodes((currentNodes) =>
-      currentNodes.map((node) => ({ ...node, selected: false }))
-    );
-  }, [setNodes]);
+  }
 
-  async function expandSelectedNode() {
-    if (!selectedNode || isBusy) return;
+  function selectNode(event, node) {
+    clickNode(
+      node.id,
+      event.shiftKey || event.metaKey || event.ctrlKey
+    );
+  }
+
+  // Creates new ideas from the one or two selected nodes. With
+  // two, every new idea has both as parents (#73). The composer
+  // (#72) passes the typed text as the instruction.
+  async function brainstorm(instruction = "") {
+    if (selectedNodes.length === 0 || isBusy) return;
 
     setIsExpanding(true);
     setError(null);
     try {
-      const expansion = await requestExpansion(
+      const expansion = await requestBrainstorm(
         sessionId,
-        selectedNode.id
+        selectedNodes.map((node) => node.id),
+        instruction
       );
       const nextGraph = toCanvasGraph({
         nodes: [...nodes, ...expansion.nodes],
@@ -137,7 +180,7 @@ export function SessionGraph({ graph, sessionId }) {
     setNodes((currentNodes) =>
       currentNodes.map((node) =>
         node.id === updatedNode.id
-          ? { ...updatedNode, type: "session", selected: true }
+          ? { ...updatedNode, type: "session" }
           : node
       )
     );
@@ -245,7 +288,7 @@ export function SessionGraph({ graph, sessionId }) {
             !deleted.has(edge.target)
         )
       );
-      clearSelection();
+      clear();
     } catch (err) {
       setError(
         err.message ?? "The branch could not be deleted."
@@ -260,18 +303,27 @@ export function SessionGraph({ graph, sessionId }) {
       <div
         className="session-graph__selection"
         aria-live="polite">
-        {selectedNode ? (
+        {selectedNodes.length === 2 ? (
+          <p>
+            Selected ideas:{" "}
+            <strong>{selectedNodes[0].data.content}</strong> and{" "}
+            <strong>{selectedNodes[1].data.content}</strong>
+          </p>
+        ) : selectedNode ? (
           <p>
             Selected idea:{" "}
             <strong>{selectedNode.data.content}</strong>
           </p>
         ) : (
-          <p>Select an idea to expand it.</p>
+          <p>
+            Select an idea to expand it. Shift-click a second
+            idea to combine the two.
+          </p>
         )}
         <button
           type="button"
-          onClick={expandSelectedNode}
-          disabled={!selectedNode || isBusy}>
+          onClick={() => brainstorm()}
+          disabled={selectedNodes.length === 0 || isBusy}>
           {isExpanding ? "Expanding…" : "Expand"}
         </button>
         <fieldset className="session-graph__markers">
@@ -346,14 +398,21 @@ export function SessionGraph({ graph, sessionId }) {
         {error && <p role="alert">{error}</p>}
       </div>
       <div className="session-graph">
+        {/* the selection hook owns selection, so React Flow's
+            own click, Shift-drag box and Backspace removal are
+            off */}
         <ReactFlow
-          nodes={nodes}
-          edges={edges}
+          nodes={canvasNodes}
+          edges={canvasEdges}
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeClick={selectNode}
-          onPaneClick={clearSelection}
+          onPaneClick={clear}
+          elementsSelectable={false}
+          selectionKeyCode={null}
+          multiSelectionKeyCode={null}
+          deleteKeyCode={null}
           fitView
           fitViewOptions={{ padding: 0.25 }}
           minZoom={0.3}

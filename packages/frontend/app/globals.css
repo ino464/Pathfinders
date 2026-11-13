@@ -36,6 +36,13 @@ h1 {
   margin: 0;
 }
 
+/* one line, so a long selection does not move the canvas */
+.session-graph__selection > p:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .session-graph__selection form {
   display: flex;
   gap: 0.5rem;
@@ -137,4 +144,18 @@ h1 {
 
 .session-graph .react-flow__edge-path {
   stroke: #6b7280;
+}
+
+/* a selection keeps its ancestors and children clear and fades
+   the rest (#94) */
+.session-graph .react-flow__node.is-faded,
+.session-graph .react-flow__edge.is-faded {
+  opacity: 0.3;
+}
+
+.session-graph
+  .react-flow__edge.is-highlighted
+  .react-flow__edge-path {
+  stroke: #2563eb;
+  stroke-width: 2;
 }
