@@ -156,10 +156,10 @@ describe("POST /api/expand across users", () => {
     expect(fake.groq).toHaveBeenCalledTimes(1);
     expect(writes(fake.client)).toEqual([
       {
-        rpc: "add_children",
+        rpc: "add_children_to_parents",
         args: {
           p_session_id: SESSION_A,
-          p_parent_node_id: ROOT_A,
+          p_parent_node_ids: [ROOT_A],
           p_contents: ["One", "Two", "Three"]
         }
       }
