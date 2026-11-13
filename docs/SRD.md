@@ -232,10 +232,25 @@ Groq provides the language model used for idea generation.
 
 ### 5.2 Database Schema
 
-The database is PostgreSQL, hosted through Supabase. Add the
-Postgres schema and UML diagram here.
+The database is PostgreSQL, hosted through Supabase.  Users are
+Supabase's `auth.users`. We define four tables:
 
-![Pathfinders UML Diagram](image.png)
+- **sessions**: one brainstorm. Columns: `id`, `user_id`, `title`,
+  `root_node_id`, `created_at`, `updated_at`, `deleted_at`.
+- **nodes**: one idea. Columns: `id`, `session_id`, `content`,
+  `status`, `position_x`, `position_y`, `created_at`, `deleted_at`.
+- **edges**: a link from a parent node to a child node. Columns:
+  `id`, `session_id`, `parent_node_id`, `child_node_id`,
+  `created_at`. Edges are their own table so a merged node can
+  have more than one parent.
+- **preferences**: a standing instruction for a session. Columns:
+  `id`, `session_id`, `content`, `created_at`.
+
+Every table has row-level security. A database function,
+`add_children`, writes the children of a node and their edges in
+one transaction. Design reasoning is in `docs/UML.md`.
+
+![Pathfinders UML Diagram](images/uml-data-model.png)
 ---
 
 ## 6. User Interface (UI)
@@ -252,6 +267,17 @@ https://www.figma.com/design/zgO8ysGMhs7Lumws6jWTlF/Pathfinders-UI-Storyboard?no
 ### 7.1 List of Persistent Data
 
 List the data that will be stored persistently in the database.
+
+- User accounts, including guests (Supabase `auth.users`).
+- Sessions: title, owner, root node, timestamps, and a deleted
+  marker.
+- Nodes: text, status (`pending`, `accepted` or `rejected`),
+  timestamps, and a deleted marker. Position columns exist but
+  are not used yet.
+- Edges: which node each node came from.
+- Preferences: the text of each preference and its session.
+
+Deleted sessions and nodes are marked, not removed.
 
 ---
 
