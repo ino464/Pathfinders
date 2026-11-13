@@ -21,18 +21,11 @@
 
 ### Document History
 
-| Last Date Changed | Who           | What Was Changed                                                                                                                                                                        |
-| ----------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-10-13        | Ethan Ikenaga | Replaced template workout requirements in section 3 with functional requirements traced to US-01 to US-12; rebuilt the section 8 traceability matrix; changed MySQL to Postgres in 5.2. |
-| 2026-09-25        | Ethan Ikenaga | Drafted the SRD and entered user stories US-01 to US-12.                                                                                                                                |
-
----
-
-# PATHFINDERS
-
-## Software Requirements Specification (SRS)
-
-**Course:** CSC-3100-S03-2268 **Date:** [Submission Date]
+| Last Date Changed | Who           | What Was Changed                                                                                                                                                                                                                                                               |
+| ----------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-11-12        | Ethan Ikenaga | Amended the SRD to match the implementation (#76): fixed the section 3 table, updated requirements for like/dislike flags, soft delete, and session rename, wrote sections 4.2, 5, and 7, listed export as implemented, and filled in the traceability matrix with real files. |
+| 2026-10-13        | Ethan Ikenaga | Replaced template workout requirements in section 3 with functional requirements traced to US-01 to US-12; rebuilt the section 8 traceability matrix; changed MySQL to Postgres in 5.2.                                                                                        |
+| 2026-09-25        | Ethan Ikenaga | Drafted the SRD and entered user stories US-01 to US-12.                                                                                                                                                                                                                       |
 
 ---
 
@@ -143,7 +136,7 @@ User stories follow this format:
 
 ### 2.2 Admin Features
 
-Add administrator user stories here, if applicable.
+There are no Admin features currently in Pathfinders
 
 ---
 
@@ -151,20 +144,25 @@ Add administrator user stories here, if applicable.
 
 The system shall:
 
-| ID    | Requirement                                                                                                    | Priority |
-| ----- | -------------------------------------------------------------------------------------------------------------- | -------: |
-| FR-01 | The system shall suggest and automatically create new branches based on the context of a selected node.        |    US-01 | 1   |
-| FR-02 | The system shall allow users to add new nodes to a selected chat branch, using that branch's existing context. |    US-02 | 1   |
-| FR-03 | The system shall let users view their full chat history and switch between idea branches.                      |    US-03 | 1   |
-| FR-04 | The system shall allow returning users to log in and resume their previous brainstorming work.                 |    US-04 | 2   |
-| FR-05 | The system shall allow users to accept or reject nodes and shall record each decision.                         |    US-05 | 2   |
-| FR-06 | The system shall allow users to return to a previous node in order to develop that idea in a new direction.    |    US-06 | 2   |
-| FR-07 | The system shall allow users to delete or deactivate branches and chats.                                       |    US-07 | 2   |
-| FR-08 | The system shall allow users to enter preferences and shall apply them throughout the brainstorming session.   |    US-08 | 3   |
-| FR-09 | The system shall allow users to rename chats.                                                                  |    US-09 | 3   |
-| FR-10 | The system shall allow users to export a brainstorm graph so it can be shared.                                 |    US-10 | 3   |
-| FR-11 | The system shall allow users to import a brainstorm graph that another user exported.                          |    US-11 | 3   |
-| FR-12 | The system shall allow users to select two or more nodes and merge them into a combined node.                  |    US-12 | 4   |
+Each requirement's priority is the priority of the user story it
+traces to (see [2.1](#21-user-features)).
+
+| ID    | Requirement                                                                                                    | User Story                 |
+| ----- | -------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| FR-01 | The system shall suggest and automatically create new branches based on the context of a selected node.        | [US-01](#21-user-features) |
+| FR-02 | The system shall allow users to add new nodes to a selected chat branch, using that branch's existing context. | [US-02](#21-user-features) |
+| FR-03 | The system shall let users view their full chat history and switch between idea branches.                      | [US-03](#21-user-features) |
+| FR-04 | The system shall allow returning users to log in and resume their previous brainstorming work.                 | [US-04](#21-user-features) |
+| FR-05 | The system shall allow users to accept or reject nodes and shall record each decision.                         | [US-05](#21-user-features) |
+| FR-06 | The system shall allow users to return to a previous node in order to develop that idea in a new direction.    | [US-06](#21-user-features) |
+| FR-07 | The system shall allow users to delete or deactivate branches and chats.                                       | [US-07](#21-user-features) |
+| FR-08 | The system shall allow users to enter preferences and shall apply them throughout the brainstorming session.   | [US-08](#21-user-features) |
+| FR-09 | The system shall allow users to rename chats.                                                                  | [US-09](#21-user-features) |
+| FR-10 | The system shall allow users to export a brainstorm graph so it can be shared.                                 | [US-10](#21-user-features) |
+| FR-11 | The system shall allow users to import a brainstorm graph that another user exported.                          | [US-11](#21-user-features) |
+| FR-12 | The system shall allow users to select two or more nodes and merge them into a combined node.                  | [US-12](#21-user-features) |
+
+---
 
 ---
 
@@ -173,36 +171,81 @@ The system shall:
 ### 4.1 Data Integrity and Security
 
 - **Integrity:** The system shall handle errors and invalid data
-  appropriately.
-- **Security:** The system shall use bcrypt for password
-  hashing.
-- **Security:** The system shall use environment variables for
-  database credentials.
+  appropriately. Invalid requests get a `400` response, the
+  database refuses node statuses other than `pending`,
+  `accepted` and `rejected`, and the system refuses any link
+  between nodes that would create a loop.
+- **Security:** Passwords shall be handled by Supabase Auth. The
+  application shall not store or hash passwords itself.
+- **Security:** Server-side code shall read secrets (the
+  Supabase keys and the Groq API key) from environment
+  variables, not from source code.
 
 ### 4.2 Performance and Usability
 
-- Add performance requirements here.
-- Add usability requirements here.
+- **Performance:** A request to the language model shall time
+  out after 15 seconds and report an error.
+- **Performance:** Each session shall be limited to 10 idea
+  requests per 10 minutes, to control model cost and abuse.
+- **Usability:** A returning visitor with a valid session shall
+  go straight to the app without choosing a sign-in method
+  again.
 
 ---
 
 ## 5. System Architecture
 
+Pathfinders has no separate backend service. The backend is
+server-side code inside a Next.js application, hosted on Vercel.
+Supabase provides the PostgreSQL database and authentication.
+Groq provides the language model used for idea generation.
+
 ### 5.1 REST API Endpoints
 
-| Method | URL              | Description                        |
-| ------ | ---------------- | ---------------------------------- |
-| GET    | `/api/resources` | Fetches a collection of resources. |
-| POST   | `/api/resources` | Creates a new resource.            |
+| Method | URL                      | Description                                                                                          |
+| ------ | ------------------------ | ---------------------------------------------------------------------------------------------------- |
+| POST   | `/api/expand`            | Generates ideas from a selected node and returns the new `{ nodes, edges }`. Needs a signed-in user. |
+| GET    | `/sessions/[id]/export`  | Downloads a session as a JSON file. Format: `docs/session-export-format.md`.                         |
+| GET    | `/auth/callback`         | Finishes sign-in after an email link or Google redirect.                                             |
+| POST   | `/api/auth/merge/start`  | Starts moving a guest's sessions into an account.                                                    |
+| POST   | `/api/auth/merge/finish` | Finishes moving a guest's sessions into an account.                                                  |
 
-Add your planned endpoints based on your REST API design.
+`POST /api/expand` answers:
+
+| Status | When                                                                                                     |
+| ------ | -------------------------------------------------------------------------------------------------------- |
+| `201`  | The ideas were added.                                                                                    |
+| `400`  | The body is not JSON, an id is not a UUID, or the instruction is not a string of at most 500 characters. |
+| `401`  | Nobody is signed in.                                                                                     |
+| `404`  | The node is not in the session, is deleted, or the session belongs to another user.                      |
+| `429`  | The session reached the idea limit.                                                                      |
+| `502`  | The model request failed or its answer was not valid.                                                    |
+| `504`  | The model did not answer in time.                                                                        |
+| `500`  | Any other error.                                                                                         |
 
 ### 5.2 Database Schema
 
-The database is PostgreSQL, hosted through Supabase. Add the
-Postgres schema and UML diagram here.
+The database is PostgreSQL, hosted through Supabase. Users are
+Supabase's `auth.users`. We define four tables:
 
-![Pathfinders UML Diagram](image.png)
+- **sessions**: one brainstorm. Columns: `id`, `user_id`,
+  `title`, `root_node_id`, `created_at`, `updated_at`,
+  `deleted_at`.
+- **nodes**: one idea. Columns: `id`, `session_id`, `content`,
+  `status`, `position_x`, `position_y`, `created_at`,
+  `deleted_at`.
+- **edges**: a link from a parent node to a child node. Columns:
+  `id`, `session_id`, `parent_node_id`, `child_node_id`,
+  `created_at`. Edges are their own table so a merged node can
+  have more than one parent.
+- **preferences**: a standing instruction for a session.
+  Columns: `id`, `session_id`, `content`, `created_at`.
+
+Every table has row-level security. A database function,
+`add_children`, writes the children of a node and their edges in
+one transaction. Design reasoning is in `docs/UML.md`.
+
+![Pathfinders UML Diagram](images/uml-data-model.png)
 ---
 
 ## 6. User Interface (UI)
@@ -220,30 +263,49 @@ https://www.figma.com/design/zgO8ysGMhs7Lumws6jWTlF/Pathfinders-UI-Storyboard?no
 
 List the data that will be stored persistently in the database.
 
+- User accounts, including guests (Supabase `auth.users`).
+- Sessions: title, owner, root node, timestamps, and a deleted
+  marker.
+- Nodes: text, status (`pending`, `accepted` or `rejected`),
+  timestamps, and a deleted marker. Position columns exist but
+  are not used yet.
+- Edges: which node each node came from.
+- Preferences: the text of each preference and its session.
+
+Deleted sessions and nodes are marked, not removed.
+
 ---
 
 ## 8. Traceability Matrix
 
-| ID    | Requirement | Line of Code |
-| ----- | ----------- | -----------: |
-| US-01 | FR-01       |          TBD |
-| US-02 | FR-02       |          TBD |
-| US-03 | FR-03       |          TBD |
-| US-04 | FR-04       |          TBD |
-| US-05 | FR-05       |          TBD |
-| US-06 | FR-06       |          TBD |
-| US-07 | FR-07       |          TBD |
-| US-08 | FR-08       |          TBD |
-| US-09 | FR-09       |          TBD |
-| US-10 | FR-10       |          TBD |
-| US-11 | FR-11       |          TBD |
-| US-12 | FR-12       |          TBD |
+| User Story | Requirement          | Main Code                                                                            | Status      |
+| ---------- | -------------------- | ------------------------------------------------------------------------------------ | ----------- |
+| US-01      | FR-01 (Expand)       | [expand.js:136](../packages/frontend/lib/expand.js#L136)                             | Implemented |
+| US-02      | FR-02 (Add/edit)     | [node-actions.js:45](../packages/frontend/app/sessions/%5Bid%5D/node-actions.js#L45) | Implemented |
+| US-03      | FR-03 (Sessions)     | [session-graph.jsx:65](../packages/frontend/app/session-graph.jsx#L65)               | Implemented |
+| US-04      | FR-04 (Sign in)      | [auth-provider.js:49](../packages/frontend/app/auth-provider.js#L49)                 | Implemented |
+| US-05      | FR-05 (Like/dislike) | [node-actions.js:62](../packages/frontend/app/sessions/%5Bid%5D/node-actions.js#L62) | Implemented |
+| US-06      | FR-06 (Return)       | [TODO]                                                                               | [TODO]      |
+| US-07      | FR-07 (Delete)       | [graph-data.js:438](../packages/frontend/lib/graph-data.js#L438)                     | Implemented |
+| US-08      | FR-08 (Preferences)  | [actions.js:65](../packages/frontend/app/sessions/actions.js#L65)                    | Implemented |
+| US-09      | FR-09 (Rename)       | [actions.js:44](../packages/frontend/app/sessions/actions.js#L44)                    | Implemented |
+| US-10      | FR-10 (Export)       | [session-export.js:29](../packages/frontend/lib/session-export.js#L29)               | Implemented |
+| US-11      | FR-11 (Import)       | Not started                                                                          | Planned     |
+| US-12      | FR-12 (Merge nodes)  | Not started                                                                          | Planned     |
 
 ---
 
 ## 9. Appendices
 
-Add supporting materials here.
+- `docs/UML.md`: data model and the reasoning behind it
+- `docs/backend-architecture.md`: backend decisions, data access
+  layer, access control
+- `docs/auth.md`: sign-in methods and guest merge
+- `docs/session-export-format.md`: export file format
+- `docs/context-assembly-cases.md` and
+  `docs/expansion-instruction.md`: how ideas are generated
+- `docs/images/`: sequence diagrams for sign-up, sign-in and
+  backend calls
 
 ---
 
