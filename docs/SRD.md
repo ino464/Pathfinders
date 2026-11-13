@@ -21,11 +21,11 @@
 
 ### Document History
 
-| Last Date Changed | Who           | What Was Changed                                                                                                                                                                        |
-| ----------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Last Date Changed | Who           | What Was Changed                                                                                                                                                                                                                                                               |
+| ----------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 2026-11-12        | Ethan Ikenaga | Amended the SRD to match the implementation (#76): fixed the section 3 table, updated requirements for like/dislike flags, soft delete, and session rename, wrote sections 4.2, 5, and 7, listed export as implemented, and filled in the traceability matrix with real files. |
-| 2026-10-13        | Ethan Ikenaga | Replaced template workout requirements in section 3 with functional requirements traced to US-01 to US-12; rebuilt the section 8 traceability matrix; changed MySQL to Postgres in 5.2. |
-| 2026-09-25        | Ethan Ikenaga | Drafted the SRD and entered user stories US-01 to US-12.                                                                                                                                |
+| 2026-10-13        | Ethan Ikenaga | Replaced template workout requirements in section 3 with functional requirements traced to US-01 to US-12; rebuilt the section 8 traceability matrix; changed MySQL to Postgres in 5.2.                                                                                        |
+| 2026-09-25        | Ethan Ikenaga | Drafted the SRD and entered user stories US-01 to US-12.                                                                                                                                                                                                                       |
 
 ---
 
@@ -144,7 +144,8 @@ There are no Admin features currently in Pathfinders
 
 The system shall:
 
-Each requirement's priority is the priority of the user story it traces to (see [2.1](#21-user-features)).
+Each requirement's priority is the priority of the user story it
+traces to (see [2.1](#21-user-features)).
 
 | ID    | Requirement                                                                                                    | User Story                 |
 | ----- | -------------------------------------------------------------------------------------------------------------- | -------------------------- |
@@ -187,7 +188,8 @@ Each requirement's priority is the priority of the user story it traces to (see 
 - **Performance:** Each session shall be limited to 10 idea
   requests per 10 minutes, to control model cost and abuse.
 - **Usability:** A returning visitor with a valid session shall
-  go straight to the app without choosing a sign-in method again.
+  go straight to the app without choosing a sign-in method
+  again.
 
 ---
 
@@ -200,43 +202,44 @@ Groq provides the language model used for idea generation.
 
 ### 5.1 REST API Endpoints
 
-| Method | URL              | Description                        |
-| ------ | ---------------- | ---------------------------------- |
-| POST   | `/api/expand`             | Generates ideas from a selected node and returns the new `{ nodes, edges }`. Needs a signed-in user.                                     |
-| GET    | `/sessions/[id]/export`   | Downloads a session as a JSON file. Format: `docs/session-export-format.md`.                                                             |
-| GET    | `/auth/callback`          | Finishes sign-in after an email link or Google redirect.                                                                                 |
-| POST   | `/api/auth/merge/start`   | Starts moving a guest's sessions into an account.                                                                                        |
-| POST   | `/api/auth/merge/finish`  | Finishes moving a guest's sessions into an account.                                                                                      |
+| Method | URL                      | Description                                                                                          |
+| ------ | ------------------------ | ---------------------------------------------------------------------------------------------------- |
+| POST   | `/api/expand`            | Generates ideas from a selected node and returns the new `{ nodes, edges }`. Needs a signed-in user. |
+| GET    | `/sessions/[id]/export`  | Downloads a session as a JSON file. Format: `docs/session-export-format.md`.                         |
+| GET    | `/auth/callback`         | Finishes sign-in after an email link or Google redirect.                                             |
+| POST   | `/api/auth/merge/start`  | Starts moving a guest's sessions into an account.                                                    |
+| POST   | `/api/auth/merge/finish` | Finishes moving a guest's sessions into an account.                                                  |
 
 `POST /api/expand` answers:
 
-| Status | When                                                                                                       |
-| ------ | ---------------------------------------------------------------------------------------------------------- |
-| `201`  | The ideas were added.                                                                                      |
-| `400`  | The body is not JSON, an id is not a UUID, or the instruction is not a string of at most 500 characters.   |
-| `401`  | Nobody is signed in.                                                                                       |
-| `404`  | The node is not in the session, is deleted, or the session belongs to another user.                        |
-| `429`  | The session reached the idea limit.                                                                        |
-| `502`  | The model request failed or its answer was not valid.                                                      |
-| `504`  | The model did not answer in time.                                                                          |
-| `500`  | Any other error.                                                                                           |
-
+| Status | When                                                                                                     |
+| ------ | -------------------------------------------------------------------------------------------------------- |
+| `201`  | The ideas were added.                                                                                    |
+| `400`  | The body is not JSON, an id is not a UUID, or the instruction is not a string of at most 500 characters. |
+| `401`  | Nobody is signed in.                                                                                     |
+| `404`  | The node is not in the session, is deleted, or the session belongs to another user.                      |
+| `429`  | The session reached the idea limit.                                                                      |
+| `502`  | The model request failed or its answer was not valid.                                                    |
+| `504`  | The model did not answer in time.                                                                        |
+| `500`  | Any other error.                                                                                         |
 
 ### 5.2 Database Schema
 
-The database is PostgreSQL, hosted through Supabase.  Users are
+The database is PostgreSQL, hosted through Supabase. Users are
 Supabase's `auth.users`. We define four tables:
 
-- **sessions**: one brainstorm. Columns: `id`, `user_id`, `title`,
-  `root_node_id`, `created_at`, `updated_at`, `deleted_at`.
+- **sessions**: one brainstorm. Columns: `id`, `user_id`,
+  `title`, `root_node_id`, `created_at`, `updated_at`,
+  `deleted_at`.
 - **nodes**: one idea. Columns: `id`, `session_id`, `content`,
-  `status`, `position_x`, `position_y`, `created_at`, `deleted_at`.
+  `status`, `position_x`, `position_y`, `created_at`,
+  `deleted_at`.
 - **edges**: a link from a parent node to a child node. Columns:
   `id`, `session_id`, `parent_node_id`, `child_node_id`,
   `created_at`. Edges are their own table so a merged node can
   have more than one parent.
-- **preferences**: a standing instruction for a session. Columns:
-  `id`, `session_id`, `content`, `created_at`.
+- **preferences**: a standing instruction for a session.
+  Columns: `id`, `session_id`, `content`, `created_at`.
 
 Every table has row-level security. A database function,
 `add_children`, writes the children of a node and their edges in
@@ -289,7 +292,6 @@ Deleted sessions and nodes are marked, not removed.
 | US-10      | FR-10 (Export)       | [session-export.js:29](../packages/frontend/lib/session-export.js#L29)               | Implemented |
 | US-11      | FR-11 (Import)       | Not started                                                                          | Planned     |
 | US-12      | FR-12 (Merge nodes)  | Not started                                                                          | Planned     |
-
 
 ---
 
