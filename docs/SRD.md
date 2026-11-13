@@ -283,20 +283,21 @@ Deleted sessions and nodes are marked, not removed.
 
 ## 8. Traceability Matrix
 
-| ID    | Requirement | Line of Code |
-| ----- | ----------- | -----------: |
-| US-01 | FR-01       |          TBD |
-| US-02 | FR-02       |          TBD |
-| US-03 | FR-03       |          TBD |
-| US-04 | FR-04       |          TBD |
-| US-05 | FR-05       |          TBD |
-| US-06 | FR-06       |          TBD |
-| US-07 | FR-07       |          TBD |
-| US-08 | FR-08       |          TBD |
-| US-09 | FR-09       |          TBD |
-| US-10 | FR-10       |          TBD |
-| US-11 | FR-11       |          TBD |
-| US-12 | FR-12       |          TBD |
+| User Story | Requirement          | Main Code                                                                            | Status      |
+| ---------- | -------------------- | ------------------------------------------------------------------------------------ | ----------- |
+| US-01      | FR-01 (Expand)       | [expand.js:136](../packages/frontend/lib/expand.js#L136)                             | Implemented |
+| US-02      | FR-02 (Add/edit)     | [node-actions.js:45](../packages/frontend/app/sessions/%5Bid%5D/node-actions.js#L45) | Implemented |
+| US-03      | FR-03 (Sessions)     | [session-graph.jsx:65](../packages/frontend/app/session-graph.jsx#L65)               | Implemented |
+| US-04      | FR-04 (Sign in)      | [auth-provider.js:49](../packages/frontend/app/auth-provider.js#L49)                 | Implemented |
+| US-05      | FR-05 (Like/dislike) | [node-actions.js:62](../packages/frontend/app/sessions/%5Bid%5D/node-actions.js#L62) | Implemented |
+| US-06      | FR-06 (Return)       | [TODO]                                                                               | [TODO]      |
+| US-07      | FR-07 (Delete)       | [graph-data.js:438](../packages/frontend/lib/graph-data.js#L438)                     | Implemented |
+| US-08      | FR-08 (Preferences)  | [actions.js:65](../packages/frontend/app/sessions/actions.js#L65)                    | Implemented |
+| US-09      | FR-09 (Rename)       | [actions.js:44](../packages/frontend/app/sessions/actions.js#L44)                    | Implemented |
+| US-10      | FR-10 (Export)       | [session-export.js:29](../packages/frontend/lib/session-export.js#L29)               | Implemented |
+| US-11      | FR-11 (Import)       | Not started                                                                          | Planned     |
+| US-12      | FR-12 (Merge nodes)  | Not started                                                                          | Planned     |
+
 
 ---
 
