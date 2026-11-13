@@ -29,14 +29,6 @@
 
 ---
 
-# PATHFINDERS
-
-## Software Requirements Specification (SRS)
-
-**Course:** CSC-3100-S03-2268 **Date:** [Submission Date]
-
----
-
 ## Table of Contents
 
 1. [Introduction](#1-introduction)
