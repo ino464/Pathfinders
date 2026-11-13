@@ -13,6 +13,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { requestBrainstorm } from "../lib/expand-client";
+import { highlightSelection } from "../lib/graph-highlight";
 import { layoutGraph } from "../lib/graph-layout";
 import { FLAGS, nextFlagStatus } from "../lib/node-status";
 import { useNodeSelection } from "./use-node-selection";
@@ -89,15 +90,41 @@ export function SessionGraph({ graph, sessionId }) {
     selectedNodes.length === 1 ? selectedNodes[0] : null;
   const isBusy = isExpanding || isSaving;
 
+  // the selection's ancestors and children stay clear, and the
+  // other ideas and edges fade
+  const highlight = useMemo(
+    () => highlightSelection(edges, selectedIds),
+    [edges, selectedIds]
+  );
+
   // React Flow draws a node as selected from its `selected`
   // field, so the field follows the selection hook
   const canvasNodes = useMemo(
     () =>
       nodes.map((node) => ({
         ...node,
-        selected: selectedIds.includes(node.id)
+        selected: selectedIds.includes(node.id),
+        className:
+          highlight && !highlight.nodeIds.has(node.id)
+            ? "is-faded"
+            : undefined
       })),
-    [nodes, selectedIds]
+    [nodes, selectedIds, highlight]
+  );
+
+  const canvasEdges = useMemo(
+    () =>
+      edges.map((edge) => {
+        if (!highlight) return edge;
+        const on = highlight.edgeIds.has(edge.id);
+        // a highlighted edge is drawn above the faded ones
+        return {
+          ...edge,
+          className: on ? "is-highlighted" : "is-faded",
+          zIndex: on ? 1 : 0
+        };
+      }),
+    [edges, highlight]
   );
 
   function resetForms(ids) {
@@ -371,7 +398,7 @@ export function SessionGraph({ graph, sessionId }) {
             off */}
         <ReactFlow
           nodes={canvasNodes}
-          edges={edges}
+          edges={canvasEdges}
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}

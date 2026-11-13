@@ -105,6 +105,26 @@ describe("SessionGraph selection", () => {
     ).toBe(false);
   });
 
+  test("a selection fades the ideas outside its path", () => {
+    renderGraph();
+    const faded = () =>
+      [
+        ...document.querySelectorAll(
+          ".react-flow__node.is-faded"
+        )
+      ]
+        .map((el) => el.textContent)
+        .sort();
+
+    expect(faded()).toEqual([]);
+
+    clickIdea("Tacos");
+    expect(faded()).toEqual(["Pizza", "Sushi"]);
+
+    clickIdea("Sushi", { shiftKey: true });
+    expect(faded()).toEqual(["Pizza"]);
+  });
+
   test("a Shift-click selects a second idea and disables the single-idea actions", () => {
     renderGraph();
 
