@@ -31,6 +31,7 @@ const {
   RATE_LIMIT_EXPANSIONS,
   RATE_LIMIT_WINDOW_MS,
   TIMEOUT_MS,
+  TWO_NODE_INSTRUCTION,
   buildInstruction,
   expandNode
 } = await import("../lib/expand");
@@ -343,6 +344,17 @@ describe("expandNode from two nodes (#73)", () => {
     expect(messages[3].content).toContain(
       part2("Child of A", "Child of B", "Shared child")
     );
+  });
+
+  test("ends on the two-node instruction for two nodes, the base one for one", async () => {
+    await expandNode("s1", ["A", "B"]);
+    await expandNode("s1", ["A"]);
+
+    const [two, one] = fake.completion.mock.calls.map(
+      ([messages]) => messages.at(-1).content
+    );
+    expect(two.startsWith(TWO_NODE_INSTRUCTION)).toBe(true);
+    expect(one.startsWith(BASE_INSTRUCTION)).toBe(true);
   });
 
   test("a list of one id behaves as a single id", async () => {
@@ -693,6 +705,58 @@ describe("buildInstruction (#52)", () => {
         )
       ).toBe(expected);
     });
+  });
+});
+
+// Issue #73: with two selected nodes, Part 1 is replaced by a
+// text that does not say "build on the last message". Parts 2 to
+// 4 are unchanged.
+describe("buildInstruction for two nodes (#73)", () => {
+  test("is only the two-node text with no children and no direction", () => {
+    expect(buildInstruction([], "", [], 2)).toBe(
+      TWO_NODE_INSTRUCTION
+    );
+  });
+
+  test("a count of one gives the base text", () => {
+    expect(buildInstruction([], "", [], 1)).toBe(
+      BASE_INSTRUCTION
+    );
+  });
+
+  test("differs from the base text", () => {
+    expect(TWO_NODE_INSTRUCTION).not.toBe(BASE_INSTRUCTION);
+  });
+
+  test("keeps parts 2 and 3 after the two-node text", () => {
+    const children = [
+      node("C1", "Child one", "2026-10-18T10:00:01Z")
+    ];
+
+    expect(
+      buildInstruction(children, "cheaper options", [], 2)
+    ).toBe(
+      `${TWO_NODE_INSTRUCTION}\n\n${part2("Child one")}\n\n` +
+        part3("cheaper options")
+    );
+  });
+
+  test("matches the block in docs/expansion-instruction.md", () => {
+    const doc = readFileSync(
+      new URL(
+        "../../../docs/expansion-instruction.md",
+        import.meta.url
+      ),
+      "utf8"
+    );
+    const match = doc.match(
+      /^### Two selected nodes[\s\S]*?```text\r?\n([\s\S]*?)\r?\n```/m
+    );
+
+    expect(match).not.toBeNull();
+    expect(TWO_NODE_INSTRUCTION).toBe(
+      match[1].replace(/\r\n/g, "\n")
+    );
   });
 });
 
