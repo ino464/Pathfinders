@@ -151,20 +151,33 @@ export function isRateLimited(nodes, edges, now) {
   );
 }
 
+// nodeIds is one id, or a list of ids when the user selected
+// several nodes (#73). The new ideas become children of every
+// selected node.
 export async function expandNode(
   sessionId,
-  nodeId,
+  nodeIds,
   direction = ""
 ) {
+  // a single id is the same as a list of one
+  const targetIds = Array.isArray(nodeIds)
+    ? nodeIds
+    : [nodeIds];
+
   const { nodes, edges, preferences } =
     await getExpansionInputs(sessionId);
 
-  const target = nodes.find((n) => n.id === nodeId);
-  if (!target || target.deleted_at) {
-    throw new ExpandError(
-      404,
-      "Node not found in this session."
-    );
+  // Every target must be a live node of this session. A node
+  // from another session is not in `nodes`, so it is refused
+  // here the same way as a node that does not exist.
+  for (const id of targetIds) {
+    const target = nodes.find((n) => n.id === id);
+    if (!target || target.deleted_at) {
+      throw new ExpandError(
+        404,
+        "Node not found in this session."
+      );
+    }
   }
   if (isRateLimited(nodes, edges, Date.now())) {
     throw new ExpandError(
@@ -176,12 +189,14 @@ export async function expandNode(
   const messages = assembleContext(
     nodes,
     edges,
-    nodeId,
+    targetIds,
     preferences
   );
+  // the children of any selected node; a child of two selected
+  // nodes is in the set once
   const childIds = new Set(
     edges
-      .filter((e) => e.parent_node_id === nodeId)
+      .filter((e) => targetIds.includes(e.parent_node_id))
       .map((e) => e.child_node_id)
   );
   const children = nodes.filter((n) => childIds.has(n.id));
@@ -208,5 +223,5 @@ export async function expandNode(
   }
 
   const ideas = parseIdeas(text);
-  return addChildren(sessionId, nodeId, ideas);
+  return addChildren(sessionId, targetIds, ideas);
 }
