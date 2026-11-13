@@ -275,19 +275,22 @@ export async function removePreference(preferenceId) {
 }
 
 // Writes the children and their edges in one transaction
-// through the add_children database function, so a failure
-// leaves no node without a parent.
+// through the add_children_to_parents database function, so a
+// failure leaves no node without a parent. parentIds is one id,
+// or a list of ids when a new idea has several parents (#73).
 export async function addChildren(
   sessionId,
-  parentId,
+  parentIds,
   contents
 ) {
   const supabase = await createClient();
 
   const data = unwrap(
-    await supabase.rpc("add_children", {
+    await supabase.rpc("add_children_to_parents", {
       p_session_id: sessionId,
-      p_parent_node_id: parentId,
+      p_parent_node_ids: Array.isArray(parentIds)
+        ? parentIds
+        : [parentIds],
       p_contents: contents
     })
   );

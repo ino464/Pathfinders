@@ -403,3 +403,175 @@ describe("context assembly", () => {
     ]);
   });
 });
+
+// Cases for issue #73. Brainstorming from two selected nodes
+// builds one context from the union of both nodes' ancestors.
+// A single id still works, so the cases above stay as they are.
+describe("context assembly with several targets", () => {
+  test("case 8a: two siblings share their parent once", () => {
+    // setup: R → A and R → B.
+    const nodes = [
+      node("B", "Idea B", 3),
+      node("A", "Idea A", 2),
+      node("R", "Root prompt", 1)
+    ];
+    const edges = [edge("R", "A"), edge("R", "B")];
+
+    // run: both siblings are targets
+    const result = assembleContext(nodes, edges, ["A", "B"]);
+
+    // check: R appears once and first, then A, then B
+    expect(result).toEqual([
+      { role: "user", content: "Root prompt" },
+      { role: "assistant", content: "Idea A" },
+      { role: "assistant", content: "Idea B" }
+    ]);
+  });
+
+  test("case 8b: targets in different branches, other branches left out", () => {
+    // setup: R → A → C, R → B → D, and A → E, which is not selected.
+    const nodes = [
+      node("E", "Idea E", 6),
+      node("D", "Idea D", 5),
+      node("C", "Idea C", 4),
+      node("B", "Idea B", 3),
+      node("A", "Idea A", 2),
+      node("R", "Root prompt", 1)
+    ];
+    const edges = [
+      edge("R", "A"),
+      edge("R", "B"),
+      edge("A", "C"),
+      edge("B", "D"),
+      edge("A", "E")
+    ];
+
+    // run: C and D are targets
+    const result = assembleContext(nodes, edges, ["C", "D"]);
+
+    // check: the union of both paths in creation order, no E
+    expect(result).toEqual([
+      { role: "user", content: "Root prompt" },
+      { role: "assistant", content: "Idea A" },
+      { role: "assistant", content: "Idea B" },
+      { role: "assistant", content: "Idea C" },
+      { role: "assistant", content: "Idea D" }
+    ]);
+  });
+
+  test("case 8c: a target and its own ancestor appear once each", () => {
+    // setup: R → A → C.
+    const nodes = [
+      node("C", "Idea C", 3),
+      node("A", "Idea A", 2),
+      node("R", "Root prompt", 1)
+    ];
+    const edges = [edge("R", "A"), edge("A", "C")];
+
+    // run: A is selected along with its child C
+    const result = assembleContext(nodes, edges, ["A", "C"]);
+
+    // check: no duplicates, still in path order
+    expect(result).toEqual([
+      { role: "user", content: "Root prompt" },
+      { role: "assistant", content: "Idea A" },
+      { role: "assistant", content: "Idea C" }
+    ]);
+  });
+
+  test("case 8d: the order of the targets does not matter", () => {
+    // setup: R → A and R → B.
+    const nodes = [
+      node("B", "Idea B", 3),
+      node("A", "Idea A", 2),
+      node("R", "Root prompt", 1)
+    ];
+    const edges = [edge("R", "A"), edge("R", "B")];
+
+    // run: same targets, listed both ways
+    const forward = assembleContext(nodes, edges, ["A", "B"]);
+    const backward = assembleContext(nodes, edges, ["B", "A"]);
+
+    // check: the same messages either way
+    expect(backward).toEqual(forward);
+  });
+
+  test("case 8e: a list of one id matches a single id", () => {
+    // setup: R → A → B.
+    const nodes = [
+      node("B", "Idea B", 3),
+      node("A", "Idea A", 2),
+      node("R", "Root prompt", 1)
+    ];
+    const edges = [edge("R", "A"), edge("A", "B")];
+
+    // run + check: ["B"] and "B" give the same messages
+    expect(assembleContext(nodes, edges, ["B"])).toEqual(
+      assembleContext(nodes, edges, "B")
+    );
+  });
+
+  test("case 8f: preferences come first and only once", () => {
+    // setup: R → A and R → B, with one preference.
+    const nodes = [
+      node("B", "Idea B", 3),
+      node("A", "Idea A", 2),
+      node("R", "Root prompt", 1)
+    ];
+    const edges = [edge("R", "A"), edge("R", "B")];
+    const preferences = [pref("P1", "Keep it cheap", 1)];
+
+    // run: two targets with preferences
+    const result = assembleContext(
+      nodes,
+      edges,
+      ["A", "B"],
+      preferences
+    );
+
+    // check: one system message at the start
+    expect(result).toEqual([
+      { role: "system", content: "Keep it cheap" },
+      { role: "user", content: "Root prompt" },
+      { role: "assistant", content: "Idea A" },
+      { role: "assistant", content: "Idea B" }
+    ]);
+  });
+
+  test("case 8g: one deleted target among two throws", () => {
+    // setup: R → A and R → B, and B is deleted.
+    const nodes = [
+      deleted(node("B", "Idea B", 3)),
+      node("A", "Idea A", 2),
+      node("R", "Root prompt", 1)
+    ];
+    const edges = [edge("R", "A"), edge("R", "B")];
+
+    // run + check: one unusable target is enough to refuse
+    expect(() =>
+      assembleContext(nodes, edges, ["A", "B"])
+    ).toThrow("Node was deleted");
+  });
+
+  test("case 8h: one missing target among two throws", () => {
+    // setup: R → A, and "Z" does not exist.
+    const nodes = [
+      node("A", "Idea A", 2),
+      node("R", "Root prompt", 1)
+    ];
+    const edges = [edge("R", "A")];
+
+    // run + check: an unknown id is refused
+    expect(() =>
+      assembleContext(nodes, edges, ["A", "Z"])
+    ).toThrow("Node was not found");
+  });
+
+  test("case 8i: an empty list of targets throws", () => {
+    // setup: just a root.
+    const nodes = [node("R", "Root prompt", 1)];
+
+    // run + check: there is nothing to build a context for
+    expect(() => assembleContext(nodes, [], [])).toThrow();
+  });
+});

@@ -460,7 +460,7 @@ describe("getExpansionInputs", () => {
 });
 
 describe("addChildren", () => {
-  test("calls add_children and returns React Flow shapes", async () => {
+  test("calls add_children_to_parents and returns React Flow shapes", async () => {
     fake.client = fakeClient({
       results: {
         rpc: [
@@ -503,10 +503,10 @@ describe("addChildren", () => {
     });
     expect(fake.client.calls).toEqual([
       {
-        rpc: "add_children",
+        rpc: "add_children_to_parents",
         args: {
           p_session_id: "s1",
-          p_parent_node_id: "p",
+          p_parent_node_ids: ["p"],
           p_contents: ["Child"]
         }
       }
@@ -522,10 +522,66 @@ describe("addChildren", () => {
       addChildren("s1", "p", ["Child"])
     ).rejects.toBe(failure);
   });
+
+  test("sends several parents and returns an edge for each", async () => {
+    fake.client = fakeClient({
+      results: {
+        rpc: [
+          {
+            data: {
+              nodes: [
+                {
+                  id: "c1",
+                  content: "Child",
+                  status: "pending",
+                  position_x: null,
+                  position_y: null
+                }
+              ],
+              edges: [
+                {
+                  id: "e1",
+                  parent_node_id: "p1",
+                  child_node_id: "c1"
+                },
+                {
+                  id: "e2",
+                  parent_node_id: "p2",
+                  child_node_id: "c1"
+                }
+              ]
+            },
+            error: null
+          }
+        ]
+      }
+    });
+
+    const children = await addChildren(
+      "s1",
+      ["p1", "p2"],
+      ["Child"]
+    );
+
+    expect(children.edges).toEqual([
+      { id: "e1", source: "p1", target: "c1" },
+      { id: "e2", source: "p2", target: "c1" }
+    ]);
+    expect(fake.client.calls).toEqual([
+      {
+        rpc: "add_children_to_parents",
+        args: {
+          p_session_id: "s1",
+          p_parent_node_ids: ["p1", "p2"],
+          p_contents: ["Child"]
+        }
+      }
+    ]);
+  });
 });
 
 describe("addManualChild", () => {
-  test("delegates one child to add_children", async () => {
+  test("delegates one child to add_children_to_parents", async () => {
     fake.client = fakeClient({
       results: {
         rpc: [
@@ -541,10 +597,10 @@ describe("addManualChild", () => {
 
     expect(fake.client.calls).toEqual([
       {
-        rpc: "add_children",
+        rpc: "add_children_to_parents",
         args: {
           p_session_id: "s1",
-          p_parent_node_id: "p1",
+          p_parent_node_ids: ["p1"],
           p_contents: ["Written child"]
         }
       }

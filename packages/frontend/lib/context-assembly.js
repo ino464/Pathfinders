@@ -45,9 +45,11 @@ function buildEdgeLookups(edges) {
 // collect every node before the current node (all ancestors)
 // the set only keeps one copy of each id (no duplicates)
 // Goal -> sets up a list of all nodes needed for context
-function collectAncestors(nodeById, parentsOf, targetNodeId) {
+function collectAncestors(nodeById, parentsOf, targetNodeIds) {
   const ancestors = new Set();
-  const toVisit = [targetNodeId];
+  // start from every target, so the result is the union of all
+  // their ancestors (a shared ancestor is still collected once)
+  const toVisit = [...targetNodeIds];
 
   while (toVisit.length > 0) {
     const id = toVisit.pop();
@@ -144,25 +146,39 @@ function toMessages(ordered, root, preferences) {
   return messages;
 }
 
-// Builds the model's message list for expanding a node. Pure function:
-// no Supabase, Next, or React imports. See docs/context-assembly-cases.md.
+// Builds the model's message list for expanding one or more nodes.
+// targetNodeIds is one id, or a list of ids (the nodes the user
+// selected); the context is the union of all their ancestors.
+// Pure function: no Supabase, Next, or React imports.
+// See docs/context-assembly-cases.md.
 export function assembleContext(
   nodes,
   edges,
-  targetNodeId,
+  targetNodeIds,
   preferences = []
 ) {
+  // a single id is the same as a list of one
+  const targetIds = Array.isArray(targetNodeIds)
+    ? targetNodeIds
+    : [targetNodeIds];
+  if (targetIds.length === 0) {
+    throw new Error(`Error: no target nodes were given`);
+  }
+
   // map and look up each node by its id instead of looping through list every time
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
 
-  assertTargetUsable(nodeById, targetNodeId);
+  // one unusable target is enough to refuse the whole request
+  for (const id of targetIds) {
+    assertTargetUsable(nodeById, id);
+  }
 
   const { parentsOf, childrenOf } = buildEdgeLookups(edges);
 
   const ancestors = collectAncestors(
     nodeById,
     parentsOf,
-    targetNodeId
+    targetIds
   );
 
   const root = findRoot(nodes, parentsOf, ancestors);

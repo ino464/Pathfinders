@@ -16,32 +16,38 @@ this file.
 
 ## Decisions
 
-| #   | Decision            | Choice                                                                                                                                         | Status   |
-| --- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| 1   | Branch count        | Exactly 3 ideas per expansion, as today (`CHILD_COUNT`). The text below is written for 3. Changing the count means changing the text.          | Accepted |
-| 2   | Idea shape          | The prompt asks for one sentence of at most 25 words, a statement with no numbering, label or question. Only the length limit is enforced.     | Accepted |
-| 3   | Hard length limit   | An idea longer than 300 characters is a malformed answer. The expansion fails with 502 and writes nothing.                                     | Accepted |
-| 4   | Variety             | The prompt asks for ideas that differ from each other and from the context. Two ideas that are equal ignoring case are a malformed answer.     | Accepted |
-| 5   | Repeated expansions | The instruction lists up to 20 of the newest live children the target already has and tells the model not to repeat them.                      | Accepted |
-| 6   | User direction      | The request body takes an optional `instruction` string. It is added to the same trailing `user` message, after the fixed text.                | Accepted |
-| 7   | Direction limits    | Trimmed. Missing, `null`, empty or only whitespace means no direction. Longer than 500 characters, or any other type, answers 400.             | Accepted |
-| 8   | Format wins         | The fixed answer format comes before the direction and the direction is told to keep it. A direction cannot change the count or the JSON form. | Accepted |
-| 9   | Storage             | The direction is not stored. The children it produced carry its effect. No migration.                                                          | Accepted |
-| 10  | Single source       | The text below is the source of truth. A test reads it from this file and checks that the code builds the same text.                           | Accepted |
-| 11  | Tuning              | Wording and model settings such as temperature are tuned in the second PR. Each change is recorded in the tuning log below.                    | Accepted |
-| 12  | Preferences         | Part 4 lists the session's preferences last, as constraints on every idea. It keeps the format, as in decision 8. The system message stays.    | Proposed |
+| #   | Decision            | Choice                                                                                                                                              | Status   |
+| --- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| 1   | Branch count        | Exactly 3 ideas per expansion, as today (`CHILD_COUNT`). The text below is written for 3. Changing the count means changing the text.               | Accepted |
+| 2   | Idea shape          | The prompt asks for one sentence of at most 25 words, a statement with no numbering, label or question. Only the length limit is enforced.          | Accepted |
+| 3   | Hard length limit   | An idea longer than 300 characters is a malformed answer. The expansion fails with 502 and writes nothing.                                          | Accepted |
+| 4   | Variety             | The prompt asks for ideas that differ from each other and from the context. Two ideas that are equal ignoring case are a malformed answer.          | Accepted |
+| 5   | Repeated expansions | The instruction lists up to 20 of the newest live children the target already has and tells the model not to repeat them.                           | Accepted |
+| 6   | User direction      | The request body takes an optional `instruction` string. It is added to the same trailing `user` message, after the fixed text.                     | Accepted |
+| 7   | Direction limits    | Trimmed. Missing, `null`, empty or only whitespace means no direction. Longer than 500 characters, or any other type, answers 400.                  | Accepted |
+| 8   | Format wins         | The fixed answer format comes before the direction and the direction is told to keep it. A direction cannot change the count or the JSON form.      | Accepted |
+| 9   | Storage             | The direction is not stored. The children it produced carry its effect. No migration.                                                               | Accepted |
+| 10  | Single source       | The text below is the source of truth. A test reads it from this file and checks that the code builds the same text.                                | Accepted |
+| 11  | Tuning              | Wording and model settings such as temperature are tuned in the second PR. Each change is recorded in the tuning log below.                         | Accepted |
+| 12  | Preferences         | Part 4 lists the session's preferences last, as constraints on every idea. It keeps the format, as in decision 8. The system message stays.         | Proposed |
+| 13  | Two selected nodes  | With two selected nodes (#73), the two-node text below replaces Part 1. It refers to the two ideas without naming them. Parts 2 to 4 are unchanged. | Proposed |
+| 14  | Repeat list, two    | The list in Part 2 holds the live children of either selected node, each one once, still capped at 20 newest.                                       | Proposed |
 
 ## Interface
 
 - The route validates `instruction` and passes the trimmed
-  direction to `expandNode(sessionId, nodeId, direction)`. It
-  passes `""` when there is no direction.
+  direction to `expandNode(sessionId, nodeIds, direction)`.
+  `nodeIds` is one id or a list of ids. It passes `""` when
+  there is no direction.
 - `lib/expand.js` exports
-  `buildInstruction(children, direction, preferences)`, which
-  returns the trailing message text. `children` are the target's
-  child node rows. `buildInstruction` filters, orders and caps
-  them, and collapses whitespace. `preferences` are the
-  session's preference rows. It defaults to `[]`.
+  `buildInstruction(children, direction, preferences, targetCount)`,
+  which returns the trailing message text. `children` are the
+  child node rows of the selected nodes. `buildInstruction`
+  filters, orders and caps them, and collapses whitespace.
+  `preferences` are the session's preference rows. It defaults
+  to `[]`. `targetCount` is how many nodes were selected and
+  defaults to 1. With more than one, Part 1 is the two-node
+  text.
 - `expandNode` passes the `preferences` from
   `getExpansionInputs` to `buildInstruction`. It also passes
   them to `assembleContext`, which still adds them as the first
@@ -90,6 +96,18 @@ The user set these preferences for the whole session:
 Every new idea must follow all of them, even where the ideas above do not. Keep the answer format above.
 ```
 
+### Two selected nodes (replaces Part 1)
+
+When the user selects two nodes (#73), this text takes the place
+of Part 1. The test for decision 10 checks it against
+`TWO_NODE_INSTRUCTION`. The last message of the context is the
+later of the two selected nodes, so the text says it is one of
+the two. It does not say which node the other one is.
+
+```text
+Suggest 3 new ideas that combine the two ideas the user selected above. The last message above is one of them. Each idea is one sentence of at most 25 words. Make the 3 ideas clearly different from each other and from every idea above. Write each idea as a statement, without numbering, labels or questions. Answer with JSON only, in the form {"ideas": ["...", "...", "..."]}, with exactly 3 strings.
+```
+
 ## Rules
 
 1. The message list sent to the model is the assembled context
@@ -120,6 +138,10 @@ Every new idea must follow all of them, even where the ideas above do not. Keep 
     preference. It lists every preference, oldest first by
     `created_at`, then `id`.
 13. Part 4 is always last when it is present.
+14. With two selected nodes, the two-node text replaces Part 1.
+    Parts 2, 3 and 4 follow the same rules as with one node.
+15. With two selected nodes, Part 2 lists the live children of
+    either node, each one once.
 
 ## Cases
 

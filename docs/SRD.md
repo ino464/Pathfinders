@@ -202,26 +202,26 @@ Groq provides the language model used for idea generation.
 
 ### 5.1 REST API Endpoints
 
-| Method | URL                      | Description                                                                                          |
-| ------ | ------------------------ | ---------------------------------------------------------------------------------------------------- |
-| POST   | `/api/expand`            | Generates ideas from a selected node and returns the new `{ nodes, edges }`. Needs a signed-in user. |
-| GET    | `/sessions/[id]/export`  | Downloads a session as a JSON file. Format: `docs/session-export-format.md`.                         |
-| GET    | `/auth/callback`         | Finishes sign-in after an email link or Google redirect.                                             |
-| POST   | `/api/auth/merge/start`  | Starts moving a guest's sessions into an account.                                                    |
-| POST   | `/api/auth/merge/finish` | Finishes moving a guest's sessions into an account.                                                  |
+| Method | URL                      | Description                                                                                                                                                          |
+| ------ | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/api/expand`            | Generates ideas from one or two selected nodes (`nodeIds`). With two, each new idea has both as parents. Returns the new `{ nodes, edges }`. Needs a signed-in user. |
+| GET    | `/sessions/[id]/export`  | Downloads a session as a JSON file. Format: `docs/session-export-format.md`.                                                                                         |
+| GET    | `/auth/callback`         | Finishes sign-in after an email link or Google redirect.                                                                                                             |
+| POST   | `/api/auth/merge/start`  | Starts moving a guest's sessions into an account.                                                                                                                    |
+| POST   | `/api/auth/merge/finish` | Finishes moving a guest's sessions into an account.                                                                                                                  |
 
 `POST /api/expand` answers:
 
-| Status | When                                                                                                     |
-| ------ | -------------------------------------------------------------------------------------------------------- |
-| `201`  | The ideas were added.                                                                                    |
-| `400`  | The body is not JSON, an id is not a UUID, or the instruction is not a string of at most 500 characters. |
-| `401`  | Nobody is signed in.                                                                                     |
-| `404`  | The node is not in the session, is deleted, or the session belongs to another user.                      |
-| `429`  | The session reached the idea limit.                                                                      |
-| `502`  | The model request failed or its answer was not valid.                                                    |
-| `504`  | The model did not answer in time.                                                                        |
-| `500`  | Any other error.                                                                                         |
+| Status | When                                                                                                                                               |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `201`  | The ideas were added.                                                                                                                              |
+| `400`  | The body is not JSON, an id is not a UUID, `nodeIds` is not one or two distinct ids, or the instruction is not a string of at most 500 characters. |
+| `401`  | Nobody is signed in.                                                                                                                               |
+| `404`  | The node is not in the session, is deleted, or the session belongs to another user.                                                                |
+| `429`  | The session reached the idea limit.                                                                                                                |
+| `502`  | The model request failed or its answer was not valid.                                                                                              |
+| `504`  | The model did not answer in time.                                                                                                                  |
+| `500`  | Any other error.                                                                                                                                   |
 
 ### 5.2 Database Schema
 
@@ -242,8 +242,9 @@ Supabase's `auth.users`. We define four tables:
   Columns: `id`, `session_id`, `content`, `created_at`.
 
 Every table has row-level security. A database function,
-`add_children`, writes the children of a node and their edges in
-one transaction. Design reasoning is in `docs/UML.md`.
+`add_children_to_parents`, writes the children of one or two
+nodes and their edges in one transaction. Design reasoning is in
+`docs/UML.md`.
 
 ![Pathfinders UML Diagram](images/uml-data-model.png)
 ---

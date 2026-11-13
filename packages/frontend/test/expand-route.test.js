@@ -76,7 +76,11 @@ describe("POST /api/expand", () => {
       nodes: [{ id: "c1" }],
       edges: [{ id: "e1" }]
     });
-    expect(fake.expand).toHaveBeenCalledWith(SESSION, NODE, "");
+    expect(fake.expand).toHaveBeenCalledWith(
+      SESSION,
+      [NODE],
+      ""
+    );
   });
 
   test("answers 401 without expanding when nobody is signed in", async () => {
@@ -205,7 +209,7 @@ describe("POST /api/expand direction (#52)", () => {
     expect(response.status).toBe(201);
     expect(fake.expand).toHaveBeenCalledWith(
       SESSION,
-      NODE,
+      [NODE],
       direction
     );
   });
@@ -226,7 +230,7 @@ describe("POST /api/expand direction (#52)", () => {
       expect(response.status).toBe(201);
       expect(fake.expand).toHaveBeenCalledWith(
         SESSION,
-        NODE,
+        [NODE],
         ""
       );
     }
@@ -242,8 +246,110 @@ describe("POST /api/expand direction (#52)", () => {
     expect(response.status).toBe(201);
     expect(fake.expand).toHaveBeenCalledWith(
       SESSION,
-      NODE,
+      [NODE],
       "cheaper options"
     );
   });
+});
+
+// Issue #73: the body may carry `nodeIds`, one or two UUIDs.
+// `nodeId` is still accepted until the client moves over.
+describe("POST /api/expand nodeIds (#73)", () => {
+  const NODE_2 = "33333333-3333-4333-8333-333333333333";
+  const NODE_3 = "44444444-4444-4444-8444-444444444444";
+
+  beforeEach(() => {
+    fake.user = { id: "user-1" };
+    fake.expand = vi.fn(async () => ({ nodes: [], edges: [] }));
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test("passes two node ids to the expansion", async () => {
+    const response = await post({
+      sessionId: SESSION,
+      nodeIds: [NODE, NODE_2]
+    });
+
+    expect(response.status).toBe(201);
+    expect(fake.expand).toHaveBeenCalledWith(
+      SESSION,
+      [NODE, NODE_2],
+      ""
+    );
+  });
+
+  test("accepts one id in nodeIds", async () => {
+    const response = await post({
+      sessionId: SESSION,
+      nodeIds: [NODE]
+    });
+
+    expect(response.status).toBe(201);
+    expect(fake.expand).toHaveBeenCalledWith(
+      SESSION,
+      [NODE],
+      ""
+    );
+  });
+
+  test("still accepts a single nodeId", async () => {
+    const response = await post({
+      sessionId: SESSION,
+      nodeId: NODE
+    });
+
+    expect(response.status).toBe(201);
+    expect(fake.expand).toHaveBeenCalledWith(
+      SESSION,
+      [NODE],
+      ""
+    );
+  });
+
+  test("passes the trimmed direction with two nodes", async () => {
+    const response = await post({
+      sessionId: SESSION,
+      nodeIds: [NODE, NODE_2],
+      instruction: "  cheaper options  "
+    });
+
+    expect(response.status).toBe(201);
+    expect(fake.expand).toHaveBeenCalledWith(
+      SESSION,
+      [NODE, NODE_2],
+      "cheaper options"
+    );
+  });
+
+  test.each([
+    ["neither nodeId nor nodeIds", {}],
+    ["an empty nodeIds", { nodeIds: [] }],
+    ["three ids", { nodeIds: [NODE, NODE_2, NODE_3] }],
+    ["nodeIds that is not an array", { nodeIds: NODE }],
+    ["an id that is not a UUID", { nodeIds: [NODE, "n2"] }],
+    ["an id that is not a string", { nodeIds: [NODE, 7] }],
+    ["the same id twice", { nodeIds: [NODE, NODE] }],
+    [
+      "the same id twice in different case",
+      { nodeIds: [NODE, NODE.toUpperCase()] }
+    ],
+    [
+      "both nodeId and nodeIds",
+      { nodeId: NODE, nodeIds: [NODE_2] }
+    ]
+  ])(
+    "answers 400 for %s, without expanding",
+    async (_, extra) => {
+      const response = await post({
+        sessionId: SESSION,
+        ...extra
+      });
+
+      expect(response.status).toBe(400);
+      expect(fake.expand).not.toHaveBeenCalled();
+    }
+  );
 });

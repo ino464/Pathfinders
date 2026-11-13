@@ -31,6 +31,7 @@ const {
   RATE_LIMIT_EXPANSIONS,
   RATE_LIMIT_WINDOW_MS,
   TIMEOUT_MS,
+  TWO_NODE_INSTRUCTION,
   buildInstruction,
   expandNode
 } = await import("../lib/expand");
@@ -126,7 +127,7 @@ describe("expandNode", () => {
     expect(result).toEqual({ nodes: [], edges: [] });
     expect(fake.addChildren).toHaveBeenCalledWith(
       "s1",
-      "A",
+      ["A"],
       ideas()
     );
   });
@@ -229,10 +230,11 @@ describe("expandNode", () => {
 
     await expandNode("s1", "A");
 
-    expect(fake.addChildren).toHaveBeenCalledWith("s1", "A", [
-      ...ideas(CHILD_COUNT - 1),
-      longest
-    ]);
+    expect(fake.addChildren).toHaveBeenCalledWith(
+      "s1",
+      ["A"],
+      [...ideas(CHILD_COUNT - 1), longest]
+    );
   });
 
   test("answers 404 for a node that is not in the session", async () => {
@@ -264,6 +266,121 @@ describe("expandNode", () => {
     });
 
     await expectStatus(expandNode("s1", "A"), 502);
+    expect(fake.addChildren).not.toHaveBeenCalled();
+  });
+});
+
+// Issue #73: the user selects two nodes and the new ideas
+// become children of both.
+describe("expandNode from two nodes (#73)", () => {
+  // R → A and R → B, A → "Child of A", B → "Child of B", and
+  // one child "Shared child" that has both A and B as parents.
+  function twoSiblingGraph() {
+    return {
+      nodes: [
+        node("R", "Root prompt", "2026-10-18T10:00:00Z"),
+        node("A", "Idea A", "2026-10-18T10:00:01Z"),
+        node("B", "Idea B", "2026-10-18T10:00:02Z"),
+        node("AC", "Child of A", "2026-10-18T10:00:03Z"),
+        node("BC", "Child of B", "2026-10-18T10:00:04Z"),
+        node("S", "Shared child", "2026-10-18T10:00:05Z")
+      ],
+      edges: [
+        edge("R", "A"),
+        edge("R", "B"),
+        edge("A", "AC"),
+        edge("B", "BC"),
+        edge("A", "S"),
+        edge("B", "S")
+      ],
+      preferences: []
+    };
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    fake.inputs = twoSiblingGraph();
+    fake.completion = answerWith({ ideas: ideas() });
+    fake.addChildren = vi.fn(async () => ({
+      nodes: [],
+      edges: []
+    }));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  test("writes the ideas as children of both nodes", async () => {
+    await expandNode("s1", ["A", "B"]);
+
+    expect(fake.addChildren).toHaveBeenCalledWith(
+      "s1",
+      ["A", "B"],
+      ideas()
+    );
+  });
+
+  test("sends the union of both branches as context", async () => {
+    await expandNode("s1", ["A", "B"]);
+
+    const [messages] = fake.completion.mock.calls[0];
+    expect(messages.slice(0, 3)).toEqual([
+      { role: "user", content: "Root prompt" },
+      { role: "assistant", content: "Idea A" },
+      { role: "assistant", content: "Idea B" }
+    ]);
+    expect(messages).toHaveLength(4);
+    expect(messages[3].role).toBe("user");
+  });
+
+  test("lists the children of both nodes once in the do-not-repeat part", async () => {
+    await expandNode("s1", ["A", "B"]);
+
+    const [messages] = fake.completion.mock.calls[0];
+    expect(messages[3].content).toContain(
+      part2("Child of A", "Child of B", "Shared child")
+    );
+  });
+
+  test("ends on the two-node instruction for two nodes, the base one for one", async () => {
+    await expandNode("s1", ["A", "B"]);
+    await expandNode("s1", ["A"]);
+
+    const [two, one] = fake.completion.mock.calls.map(
+      ([messages]) => messages.at(-1).content
+    );
+    expect(two.startsWith(TWO_NODE_INSTRUCTION)).toBe(true);
+    expect(one.startsWith(BASE_INSTRUCTION)).toBe(true);
+  });
+
+  test("a list of one id behaves as a single id", async () => {
+    await expandNode("s1", "A");
+    await expandNode("s1", ["A"]);
+
+    const [single, listed] = fake.completion.mock.calls;
+    expect(listed).toEqual(single);
+    expect(fake.addChildren.mock.calls[1]).toEqual(
+      fake.addChildren.mock.calls[0]
+    );
+  });
+
+  test("answers 404 when one node is not in the session", async () => {
+    // A node from another session is not in this session's
+    // nodes, so it is the same as a missing one.
+    await expectStatus(expandNode("s1", ["A", "missing"]), 404);
+    expect(fake.completion).not.toHaveBeenCalled();
+    expect(fake.addChildren).not.toHaveBeenCalled();
+  });
+
+  test("answers 404 when one node is deleted", async () => {
+    fake.inputs.nodes[2].deleted_at = "2026-10-18T11:00:00Z";
+
+    await expectStatus(expandNode("s1", ["A", "B"]), 404);
+    expect(fake.completion).not.toHaveBeenCalled();
     expect(fake.addChildren).not.toHaveBeenCalled();
   });
 });
@@ -591,6 +708,58 @@ describe("buildInstruction (#52)", () => {
   });
 });
 
+// Issue #73: with two selected nodes, Part 1 is replaced by a
+// text that does not say "build on the last message". Parts 2 to
+// 4 are unchanged.
+describe("buildInstruction for two nodes (#73)", () => {
+  test("is only the two-node text with no children and no direction", () => {
+    expect(buildInstruction([], "", [], 2)).toBe(
+      TWO_NODE_INSTRUCTION
+    );
+  });
+
+  test("a count of one gives the base text", () => {
+    expect(buildInstruction([], "", [], 1)).toBe(
+      BASE_INSTRUCTION
+    );
+  });
+
+  test("differs from the base text", () => {
+    expect(TWO_NODE_INSTRUCTION).not.toBe(BASE_INSTRUCTION);
+  });
+
+  test("keeps parts 2 and 3 after the two-node text", () => {
+    const children = [
+      node("C1", "Child one", "2026-10-18T10:00:01Z")
+    ];
+
+    expect(
+      buildInstruction(children, "cheaper options", [], 2)
+    ).toBe(
+      `${TWO_NODE_INSTRUCTION}\n\n${part2("Child one")}\n\n` +
+        part3("cheaper options")
+    );
+  });
+
+  test("matches the block in docs/expansion-instruction.md", () => {
+    const doc = readFileSync(
+      new URL(
+        "../../../docs/expansion-instruction.md",
+        import.meta.url
+      ),
+      "utf8"
+    );
+    const match = doc.match(
+      /^### Two selected nodes[\s\S]*?```text\r?\n([\s\S]*?)\r?\n```/m
+    );
+
+    expect(match).not.toBeNull();
+    expect(TWO_NODE_INSTRUCTION).toBe(
+      match[1].replace(/\r\n/g, "\n")
+    );
+  });
+});
+
 describe("expandNode instruction (#52)", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -724,7 +893,7 @@ describe("expandNode instruction (#52)", () => {
     expect(fake.addChildren).toHaveBeenCalledTimes(1);
     expect(fake.addChildren).toHaveBeenCalledWith(
       "s1",
-      "A",
+      ["A"],
       ideas()
     );
   });
