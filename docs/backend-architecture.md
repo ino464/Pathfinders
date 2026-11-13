@@ -10,7 +10,9 @@ and authentication are Supabase.
 Server work runs in three places inside the Next.js app:
 
 - **Route handlers** under `app/api/`, starting with
-  `app/api/expand/route.js` (#32), which calls the LLM.
+  `app/api/expand/route.js` (#32), which calls the LLM, and
+  `app/api/chat/route.js` (#71), which talks about selected
+  nodes and writes nothing to the graph.
 - **Server actions** for changes made from the canvas, such as
   pruning a branch or accepting an idea.
 - **Server components** for pages that load data before they
@@ -28,7 +30,7 @@ Browser (React Flow canvas)
   ▼
 Route handler / server action / server component
   │
-  ├── context assembly (#31) ──► Groq   (expand only)
+  ├── context assembly (#31) ──► Groq   (expand and chat)
   │
   ▼
 Data access layer   lib/graph-data.js   (server-only)
@@ -47,8 +49,8 @@ session. How visitors get that session in the first place is in
 The data access layer is a single module,
 `packages/frontend/lib/graph-data.js`, built in issue #30. It is
 the only code in the app that reads or writes the `sessions`,
-`nodes`, `edges` and `preferences` tables, apart from moving a
-guest's sessions into an account when they sign in
+`nodes`, `edges`, `preferences` and `chat_turns` tables, apart
+from moving a guest's sessions into an account when they sign in
 (`lib/guest-merge.js`, see `docs/auth.md`). It exports these
 functions:
 
@@ -59,6 +61,7 @@ functions:
   `deleteSubtree`.
 - Preferences: `listPreferences`, `addPreference` and
   `removePreference`.
+- Chat limit: `countChatTurnsSince` and `addChatTurn` (#71).
 
 Notes on the functions:
 
@@ -186,3 +189,15 @@ parents (#73). The older `nodeId` is still accepted in place of
 | `502`  | The model request failed or its answer was not valid.                                                                                                                                               |
 | `504`  | The model did not answer in time.                                                                                                                                                                   |
 | `500`  | Any other error. The body has no details.                                                                                                                                                           |
+
+### What `/api/chat` answers
+
+`POST /api/chat` takes
+`{ sessionId, nodeIds, history, message }` and answers
+`200 { reply }`. Like `/api/expand`, it answers `401` before it
+reads the body, and RLS makes another user's session a `404`. It
+writes one `chat_turns` row per turn and nothing to `nodes` or
+`edges`. Each user gets 30 turns in a rolling hour across all
+their sessions, then `429`. The message order, the instruction
+text, the validation rules and every status code are in
+`docs/chat-instruction.md`.

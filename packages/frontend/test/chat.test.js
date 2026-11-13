@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import {
   afterEach,
   beforeEach,
@@ -386,5 +387,71 @@ describe("buildSystemMessage", () => {
       ].join("\n\n")
     );
     expect(preferences.map((p) => p.id)).toEqual(["P2", "P1"]);
+  });
+});
+
+describe("decision 13: matches docs/chat-instruction.md", () => {
+  const doc = readFileSync(
+    new URL(
+      "../../../docs/chat-instruction.md",
+      import.meta.url
+    ),
+    "utf8"
+  );
+
+  const blocks = doc
+    .split(/^### Part/m)
+    .slice(1)
+    .map((section) => {
+      const match = section.match(
+        /```text\r?\n([\s\S]*?)\r?\n```/
+      );
+      return match[1].replace(/\r\n/g, "\n");
+    });
+
+  const repeatLines = (block, placeholder, contents) =>
+    block
+      .split("\n")
+      .flatMap((line) =>
+        line.includes(placeholder)
+          ? contents.map((c) => line.replace(placeholder, c))
+          : [line]
+      )
+      .join("\n");
+
+  test("the doc has three part blocks", () => {
+    expect(blocks).toHaveLength(3);
+  });
+
+  test("CHAT_INSTRUCTION equals the part 1 block", () => {
+    expect(CHAT_INSTRUCTION).toBe(blocks[0]);
+  });
+
+  test("builds the same system message as the doc with preferences", () => {
+    const expected = [
+      blocks[0],
+      repeatLines(blocks[1], "{preference}", [
+        "Keep it cheap",
+        "Nothing greasy"
+      ])
+    ].join("\n\n");
+
+    expect(
+      buildSystemMessage([
+        pref("P1", "Keep it cheap", "2026-10-18T10:00:05Z"),
+        pref("P2", "Nothing greasy", "2026-10-18T10:00:06Z")
+      ])
+    ).toBe(expected);
+  });
+
+  test("builds the same outline as the doc", () => {
+    const { nodes, edges } = graph();
+    const expected = repeatLines(
+      blocks[2].replace("{root}", "Plan a trip"),
+      "{idea}",
+      ["Visit in spring", "Go to Kyoto (selected)"]
+    );
+
+    expect(buildOutline(nodes, edges, ["B"])).toBe(expected);
   });
 });
