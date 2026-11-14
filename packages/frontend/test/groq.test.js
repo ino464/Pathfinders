@@ -71,4 +71,51 @@ describe("requestCompletion", () => {
     ).rejects.toThrow("GROQ_API_KEY is not set");
     expect(fetch).not.toHaveBeenCalled();
   });
+
+  test("sends no response_format in text mode", async () => {
+    const fetch = answer(200, {
+      choices: [{ message: { content: "A plain reply." } }]
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    const text = await requestCompletion(messages, {
+      ...options,
+      responseFormat: "text"
+    });
+
+    expect(text).toBe("A plain reply.");
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({
+      model: "test-model",
+      messages
+    });
+  });
+
+  test("sends JSON mode when json is asked for", async () => {
+    const fetch = answer(200, {
+      choices: [{ message: { content: "{}" } }]
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    await requestCompletion(messages, {
+      ...options,
+      responseFormat: "json"
+    });
+
+    expect(
+      JSON.parse(fetch.mock.calls[0][1].body).response_format
+    ).toEqual({ type: "json_object" });
+  });
+
+  test("throws without calling Groq on an unknown format", async () => {
+    const fetch = answer(200, {});
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(
+      requestCompletion(messages, {
+        ...options,
+        responseFormat: "xml"
+      })
+    ).rejects.toThrow("Unknown response format: xml");
+    expect(fetch).not.toHaveBeenCalled();
+  });
 });

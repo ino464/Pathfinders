@@ -1,5 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { assembleContext } from "../lib/context-assembly.js";
+import {
+  assembleContext,
+  orderedContext
+} from "../lib/context-assembly.js";
 
 // Cases for issue #27. The inputs and the expected outputs
 // are in docs/context-assembly-cases.md. Issue #31 replaces
@@ -573,5 +576,23 @@ describe("context assembly with several targets", () => {
 
     // run + check: there is nothing to build a context for
     expect(() => assembleContext(nodes, [], [])).toThrow();
+  });
+});
+
+describe("orderedContext", () => {
+  test("returns the ordered nodes and the root without turning them into messages", () => {
+    const nodes = [
+      node("B", "Idea B", 3),
+      node("A", "Idea A", 2),
+      node("R", "Root prompt", 1)
+    ];
+    const edges = [edge("R", "A"), edge("A", "B")];
+
+    const { ordered, root } = orderedContext(nodes, edges, [
+      "B"
+    ]);
+
+    expect(ordered.map((n) => n.id)).toEqual(["R", "A", "B"]);
+    expect(root.id).toBe("R");
   });
 });

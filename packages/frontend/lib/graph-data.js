@@ -274,6 +274,27 @@ export async function removePreference(preferenceId) {
   return preference.id;
 }
 
+export async function countChatTurnsSince(since) {
+  const supabase = await createClient();
+
+  const { count, error } = await supabase
+    .from("chat_turns")
+    .select("id", { count: "exact", head: true })
+    .gt("created_at", since);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+export async function addChatTurn(sessionId) {
+  const supabase = await createClient();
+
+  unwrap(
+    await supabase
+      .from("chat_turns")
+      .insert({ session_id: sessionId })
+  );
+}
+
 // Writes the children and their edges in one transaction
 // through the add_children_to_parents database function, so a
 // failure leaves no node without a parent. parentIds is one id,

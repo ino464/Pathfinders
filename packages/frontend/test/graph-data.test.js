@@ -26,7 +26,9 @@ const {
   deleteSubtree,
   listPreferences,
   addPreference,
-  removePreference
+  removePreference,
+  countChatTurnsSince,
+  addChatTurn
 } = await import("../lib/graph-data");
 
 function fakeClient({
@@ -45,6 +47,7 @@ function fakeClient({
       "update",
       "delete",
       "eq",
+      "gt",
       "is",
       "in",
       "order",
@@ -1112,5 +1115,57 @@ describe("removePreference", () => {
     });
 
     await expect(removePreference("p9")).rejects.toBe(failure);
+  });
+});
+
+describe("countChatTurnsSince", () => {
+  test("counts the user's chat turns after the given time", async () => {
+    fake.client = fakeClient({
+      results: { chat_turns: [{ count: 7, error: null }] }
+    });
+
+    await expect(
+      countChatTurnsSince("2026-11-13T11:00:00.000Z")
+    ).resolves.toBe(7);
+
+    expect(fake.client.calls[0].table).toBe("chat_turns");
+    expect(fake.client.calls[0].ops).toEqual([
+      ["select", "id", { count: "exact", head: true }],
+      ["gt", "created_at", "2026-11-13T11:00:00.000Z"]
+    ]);
+  });
+
+  test("throws the Supabase error", async () => {
+    const failure = new Error("select failed");
+    fake.client = fakeClient({
+      results: { chat_turns: [{ count: null, error: failure }] }
+    });
+
+    await expect(
+      countChatTurnsSince("2026-11-13T11:00:00.000Z")
+    ).rejects.toBe(failure);
+  });
+});
+
+describe("addChatTurn", () => {
+  test("inserts a turn with only the session id", async () => {
+    fake.client = fakeClient({
+      results: { chat_turns: [{ data: null, error: null }] }
+    });
+
+    await addChatTurn("s1");
+
+    expect(fake.client.calls[0].ops).toEqual([
+      ["insert", { session_id: "s1" }]
+    ]);
+  });
+
+  test("throws the Supabase error", async () => {
+    const failure = new Error("insert failed");
+    fake.client = fakeClient({
+      results: { chat_turns: [{ data: null, error: failure }] }
+    });
+
+    await expect(addChatTurn("s1")).rejects.toBe(failure);
   });
 });
