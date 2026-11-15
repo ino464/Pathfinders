@@ -37,6 +37,31 @@ const deleted = (n) => ({
   deleted_at: "2026-01-01T00:00:09Z"
 });
 
+// Issue #90: a node's title is only for the canvas. The model
+// reads the description, which is the node's content.
+describe("context assembly and titles (#90)", () => {
+  test("a title never appears in the messages", () => {
+    const nodes = [
+      node("R", "Root prompt", 1),
+      { ...node("A", "Idea A", 2), title: "Zebra label A" },
+      { ...node("B", "Idea B", 3), title: "Zebra label B" }
+    ];
+    const edges = [edge("R", "A"), edge("A", "B")];
+
+    const result = assembleContext(nodes, edges, "B", [
+      pref("P", "Keep it cheap", 1)
+    ]);
+
+    expect(result).toEqual([
+      { role: "system", content: "Keep it cheap" },
+      { role: "user", content: "Root prompt" },
+      { role: "assistant", content: "Idea A" },
+      { role: "assistant", content: "Idea B" }
+    ]);
+    expect(JSON.stringify(result)).not.toContain("Zebra");
+  });
+});
+
 describe("context assembly", () => {
   test("case 1: root target gives one user message", () => {
     // setup: set up graph with one root

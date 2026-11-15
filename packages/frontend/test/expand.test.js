@@ -169,6 +169,36 @@ describe("expandNode", () => {
     ]);
   });
 
+  test("never sends a node's title to the model (#90)", async () => {
+    fake.inputs = {
+      nodes: [
+        node("R", "Root prompt", "2026-10-18T10:00:00Z"),
+        {
+          ...node("A", "Idea A", "2026-10-18T10:00:01Z"),
+          title: "Zebra label A"
+        },
+        {
+          ...node("B", "Idea B", "2026-10-18T10:00:02Z"),
+          title: "Zebra label B"
+        }
+      ],
+      edges: [edge("R", "A"), edge("R", "B")],
+      preferences: []
+    };
+
+    // the root's children are listed in the instruction, so this
+    // covers both the context and the do-not-repeat list
+    await expandNode("s1", "R");
+    await expandNode("s1", "A");
+
+    for (const [messages] of fake.completion.mock.calls) {
+      expect(JSON.stringify(messages)).not.toContain("Zebra");
+    }
+    expect(fake.completion.mock.calls[0][0].at(-1).content).toContain(
+      "- Idea A\n- Idea B"
+    );
+  });
+
   test("trims each title and description before it is written", async () => {
     fake.completion = answerWith({
       ideas: ideas().map((i) =>

@@ -456,6 +456,25 @@ describe("getExpansionInputs", () => {
     }
   });
 
+  test("does not select the title, so it cannot reach the model (#90)", async () => {
+    fake.client = fakeClient({
+      results: {
+        nodes: [{ data: [], error: null }],
+        edges: [{ data: [], error: null }],
+        preferences: [{ data: [], error: null }]
+      }
+    });
+
+    await getExpansionInputs("s1");
+
+    const nodesCall = fake.client.calls.find(
+      (call) => call.table === "nodes"
+    );
+    const select = nodesCall.ops.find(([op]) => op === "select");
+    expect(select[1]).toContain("content");
+    expect(select[1]).not.toContain("title");
+  });
+
   test("throws the Supabase error when a read fails", async () => {
     const failure = new Error("read failed");
     fake.client = fakeClient({
