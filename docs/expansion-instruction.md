@@ -71,7 +71,7 @@ The Part 4 line with `{preference}` repeats once per preference.
 ### Part 1: always present
 
 ```text
-Suggest 3 new ideas that build on the last message above. Each idea is one sentence of at most 25 words. Make the 3 ideas clearly different from each other and from every idea above. Write each idea as a statement, without numbering, labels or questions. Answer with JSON only, in the form {"ideas": ["...", "...", "..."]}, with exactly 3 strings.
+Suggest 3 new ideas that build on the last message above. Each idea has a title of 3 to 6 words and a description of one sentence of at most 25 words. Make the 3 ideas clearly different from each other and from every idea above. Write each title as a short noun phrase and each description as a statement. Do not number the ideas and do not write questions. Answer with JSON only, in the form {"ideas": [{"title": "...", "description": "..."}, ...]}, with exactly 3 objects.
 ```
 
 ### Part 2: only when the target has live children
@@ -105,7 +105,7 @@ later of the two selected nodes, so the text says it is one of
 the two. It does not say which node the other one is.
 
 ```text
-Suggest 3 new ideas that combine the two ideas the user selected above. The last message above is one of them. Each idea is one sentence of at most 25 words. Make the 3 ideas clearly different from each other and from every idea above. Write each idea as a statement, without numbering, labels or questions. Answer with JSON only, in the form {"ideas": ["...", "...", "..."]}, with exactly 3 strings.
+Suggest 3 new ideas that combine the two ideas the user selected above. The last message above is one of them. Each idea has a title of 3 to 6 words and a description of one sentence of at most 25 words. Make the 3 ideas clearly different from each other and from every idea above. Write each title as a short noun phrase and each description as a statement. Do not number the ideas and do not write questions. Answer with JSON only, in the form {"ideas": [{"title": "...", "description": "..."}, ...]}, with exactly 3 objects.
 ```
 
 ## Rules
@@ -129,10 +129,13 @@ Suggest 3 new ideas that combine the two ideas the user selected above. The last
 9. A missing, `null` or blank `instruction` behaves as no
    direction.
 10. The answer must be JSON with an `ideas` array of exactly 3
-    strings. Each string, after trimming, must be non-empty and
-    at most 300 characters, and no two may be equal ignoring
+    objects, each with a `title` and a `description` (#90). After
+    trimming, a title must be non-empty and at most 60
+    characters. A description must be non-empty and at most 300
+    characters, and no two descriptions may be equal ignoring
     case. Otherwise the expansion fails with 502 and nothing is
-    written.
+    written. The title is stored with the node and is never sent
+    to the model.
 11. The direction is never passed to `addChildren`.
 12. Part 4 is present only when the session has at least one
     preference. It lists every preference, oldest first by

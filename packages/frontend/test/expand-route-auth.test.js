@@ -114,7 +114,13 @@ describe("POST /api/expand across users", () => {
   beforeEach(() => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     fake.groq = vi.fn(async () =>
-      JSON.stringify({ ideas: ["One", "Two", "Three"] })
+      JSON.stringify({
+        ideas: [
+          { title: "Title one", description: "One" },
+          { title: "Title two", description: "Two" },
+          { title: "Title three", description: "Three" }
+        ]
+      })
     );
   });
 

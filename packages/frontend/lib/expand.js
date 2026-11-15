@@ -10,17 +10,20 @@ export const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 
 export const MAX_LISTED_CHILDREN = 20;
 export const MAX_IDEA_LENGTH = 300;
+export const MAX_TITLE_LENGTH = 60;
 
 // The shared end of Part 1: the shape of each idea and of the
 // answer. Only the first sentence depends on how many nodes the
 // user selected.
 const ANSWER_FORMAT =
-  "Each idea is one sentence of at most 25 words. " +
+  "Each idea has a title of 3 to 6 words and a description of " +
+  "one sentence of at most 25 words. " +
   "Make the 3 ideas clearly different from each other and " +
-  "from every idea above. Write each idea as a statement, " +
-  "without numbering, labels or questions. Answer with JSON " +
-  'only, in the form {"ideas": ["...", "...", "..."]}, with ' +
-  "exactly 3 strings.";
+  "from every idea above. Write each title as a short noun " +
+  "phrase and each description as a statement. Do not number " +
+  "the ideas and do not write questions. Answer with JSON " +
+  'only, in the form {"ideas": [{"title": "...", ' +
+  '"description": "..."}, ...]}, with exactly 3 objects.';
 
 export const BASE_INSTRUCTION =
   "Suggest 3 new ideas that build on the last message above. " +
@@ -104,11 +107,12 @@ export class ExpandError extends Error {
   }
 }
 
-// Returns the trimmed ideas, or throws when the model's answer
-// is not exactly CHILD_COUNT non-empty strings of at most
-// MAX_IDEA_LENGTH characters in an "ideas" array, or when two
-// ideas are equal ignoring case. Nothing is written when this
-// throws.
+// Returns the trimmed ideas as { title, description } objects,
+// or throws when the model's answer is not exactly CHILD_COUNT
+// objects in an "ideas" array. A title is a non-empty string of
+// at most MAX_TITLE_LENGTH characters, a description one of at
+// most MAX_IDEA_LENGTH. Two descriptions that are equal ignoring
+// case also throw. Nothing is written when this throws.
 export function parseIdeas(text) {
   let parsed;
   try {
@@ -128,23 +132,48 @@ export function parseIdeas(text) {
     );
   }
 
-  const trimmed = ideas.map((idea) =>
-    typeof idea === "string" ? idea.trim() : ""
-  );
-  if (trimmed.some((idea) => idea === "")) {
+  // an idea that is not an object has no title or description,
+  // so both come out empty and it is refused below
+  const trimmed = ideas.map((idea) => ({
+    title:
+      typeof idea?.title === "string" ? idea.title.trim() : "",
+    description:
+      typeof idea?.description === "string"
+        ? idea.description.trim()
+        : ""
+  }));
+  if (trimmed.some((idea) => idea.description === "")) {
     throw new ExpandError(
       502,
       "The model answered with an empty idea."
     );
   }
-  if (trimmed.some((idea) => idea.length > MAX_IDEA_LENGTH)) {
+  if (trimmed.some((idea) => idea.title === "")) {
+    throw new ExpandError(
+      502,
+      "The model answered with an empty title."
+    );
+  }
+  if (
+    trimmed.some(
+      (idea) => idea.description.length > MAX_IDEA_LENGTH
+    )
+  ) {
     throw new ExpandError(
       502,
       "The model answered with an idea that is too long."
     );
   }
+  if (
+    trimmed.some((idea) => idea.title.length > MAX_TITLE_LENGTH)
+  ) {
+    throw new ExpandError(
+      502,
+      "The model answered with a title that is too long."
+    );
+  }
   const distinct = new Set(
-    trimmed.map((idea) => idea.toLowerCase())
+    trimmed.map((idea) => idea.description.toLowerCase())
   );
   if (distinct.size !== trimmed.length) {
     throw new ExpandError(
@@ -247,5 +276,10 @@ export async function expandNode(
   }
 
   const ideas = parseIdeas(text);
-  return addChildren(sessionId, targetIds, ideas);
+  return addChildren(
+    sessionId,
+    targetIds,
+    ideas.map((idea) => idea.description),
+    ideas.map((idea) => idea.title)
+  );
 }
