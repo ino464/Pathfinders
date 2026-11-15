@@ -27,6 +27,7 @@ const {
   BASE_INSTRUCTION,
   CHILD_COUNT,
   MAX_IDEA_LENGTH,
+  MAX_TITLE_LENGTH,
   MODEL,
   RATE_LIMIT_EXPANSIONS,
   RATE_LIMIT_WINDOW_MS,
@@ -86,12 +87,21 @@ function smallGraph() {
   };
 }
 
+// The model answers each idea as a title and a description (#90).
+const idea = (title, description) => ({ title, description });
+
 function ideas(count = CHILD_COUNT) {
-  return Array.from(
-    { length: count },
-    (_, i) => `Idea ${i + 1}`
+  return Array.from({ length: count }, (_, i) =>
+    idea(`Title ${i + 1}`, `Idea ${i + 1}`)
   );
 }
+
+// addChildren takes the descriptions as the node content, and
+// the titles as a second list of the same length.
+const descriptions = (count = CHILD_COUNT) =>
+  ideas(count).map((i) => i.description);
+const titles = (count = CHILD_COUNT) =>
+  ideas(count).map((i) => i.title);
 
 function answerWith(value) {
   return vi.fn(async () =>
@@ -128,7 +138,8 @@ describe("expandNode", () => {
     expect(fake.addChildren).toHaveBeenCalledWith(
       "s1",
       ["A"],
-      ideas()
+      descriptions(),
+      titles()
     );
   });
 
@@ -158,14 +169,49 @@ describe("expandNode", () => {
     ]);
   });
 
-  test("trims each idea before it is written", async () => {
+  test("never sends a node's title to the model (#90)", async () => {
+    fake.inputs = {
+      nodes: [
+        node("R", "Root prompt", "2026-10-18T10:00:00Z"),
+        {
+          ...node("A", "Idea A", "2026-10-18T10:00:01Z"),
+          title: "Zebra label A"
+        },
+        {
+          ...node("B", "Idea B", "2026-10-18T10:00:02Z"),
+          title: "Zebra label B"
+        }
+      ],
+      edges: [edge("R", "A"), edge("R", "B")],
+      preferences: []
+    };
+
+    // the root's children are listed in the instruction, so this
+    // covers both the context and the do-not-repeat list
+    await expandNode("s1", "R");
+    await expandNode("s1", "A");
+
+    for (const [messages] of fake.completion.mock.calls) {
+      expect(JSON.stringify(messages)).not.toContain("Zebra");
+    }
+    expect(
+      fake.completion.mock.calls[0][0].at(-1).content
+    ).toContain("- Idea A\n- Idea B");
+  });
+
+  test("trims each title and description before it is written", async () => {
     fake.completion = answerWith({
-      ideas: ideas().map((idea) => `  ${idea}\n`)
+      ideas: ideas().map((i) =>
+        idea(` ${i.title}\n`, `  ${i.description}\n`)
+      )
     });
 
     await expandNode("s1", "A");
 
-    expect(fake.addChildren.mock.calls[0][2]).toEqual(ideas());
+    expect(fake.addChildren.mock.calls[0][2]).toEqual(
+      descriptions()
+    );
+    expect(fake.addChildren.mock.calls[0][3]).toEqual(titles());
   });
 
   test.each([
@@ -175,35 +221,76 @@ describe("expandNode", () => {
     ["too few ideas", { ideas: ideas(CHILD_COUNT - 1) }],
     ["too many ideas", { ideas: ideas(CHILD_COUNT + 1) }],
     [
-      "an empty idea",
-      { ideas: [...ideas(CHILD_COUNT - 1), " "] }
+      "an empty description",
+      { ideas: [...ideas(CHILD_COUNT - 1), idea("Title", " ")] }
     ],
     [
-      "a non-string idea",
+      "a missing description",
+      { ideas: [...ideas(CHILD_COUNT - 1), { title: "Title" }] }
+    ],
+    [
+      "a non-string description",
+      { ideas: [...ideas(CHILD_COUNT - 1), idea("Title", 7)] }
+    ],
+    [
+      "an idea that is a plain string, the old format",
+      { ideas: [...ideas(CHILD_COUNT - 1), "Just a string"] }
+    ],
+    [
+      "an idea that is not an object",
       { ideas: [...ideas(CHILD_COUNT - 1), 7] }
     ],
     [
-      "an idea of 301 characters (case 8)",
+      "a description of 301 characters (case 8)",
       {
-        ideas: [...ideas(CHILD_COUNT - 1), "x".repeat(301)]
+        ideas: [
+          ...ideas(CHILD_COUNT - 1),
+          idea("Title", "x".repeat(301))
+        ]
       }
     ],
     [
-      "two ideas equal ignoring case (case 8)",
+      "an empty title",
+      { ideas: [...ideas(CHILD_COUNT - 1), idea(" ", "Idea")] }
+    ],
+    [
+      "a missing title",
       {
         ideas: [
-          "Go hiking",
-          "go hiking",
+          ...ideas(CHILD_COUNT - 1),
+          { description: "Idea" }
+        ]
+      }
+    ],
+    [
+      "a non-string title",
+      { ideas: [...ideas(CHILD_COUNT - 1), idea(7, "Idea")] }
+    ],
+    [
+      "a title of 61 characters",
+      {
+        ideas: [
+          ...ideas(CHILD_COUNT - 1),
+          idea("x".repeat(61), "Idea")
+        ]
+      }
+    ],
+    [
+      "two descriptions equal ignoring case (case 8)",
+      {
+        ideas: [
+          idea("Title A", "Go hiking"),
+          idea("Title B", "go hiking"),
           ...ideas(CHILD_COUNT - 2)
         ]
       }
     ],
     [
-      "two ideas equal ignoring case and surrounding whitespace",
+      "two descriptions equal ignoring case and surrounding whitespace",
       {
         ideas: [
-          "Go hiking",
-          " go HIKING ",
+          idea("Title A", "Go hiking"),
+          idea("Title B", " go HIKING "),
           ...ideas(CHILD_COUNT - 2)
         ]
       }
@@ -222,10 +309,17 @@ describe("expandNode", () => {
     expect(MAX_IDEA_LENGTH).toBe(300);
   });
 
-  test("accepts an idea of exactly 300 characters after trimming", async () => {
+  test("limits a title to 60 characters", () => {
+    expect(MAX_TITLE_LENGTH).toBe(60);
+  });
+
+  test("accepts a description of exactly 300 characters after trimming", async () => {
     const longest = "x".repeat(300);
     fake.completion = answerWith({
-      ideas: [...ideas(CHILD_COUNT - 1), `  ${longest}  `]
+      ideas: [
+        ...ideas(CHILD_COUNT - 1),
+        idea("Title", `  ${longest}  `)
+      ]
     });
 
     await expandNode("s1", "A");
@@ -233,7 +327,27 @@ describe("expandNode", () => {
     expect(fake.addChildren).toHaveBeenCalledWith(
       "s1",
       ["A"],
-      [...ideas(CHILD_COUNT - 1), longest]
+      [...descriptions(CHILD_COUNT - 1), longest],
+      [...titles(CHILD_COUNT - 1), "Title"]
+    );
+  });
+
+  test("accepts a title of exactly 60 characters after trimming", async () => {
+    const longest = "x".repeat(60);
+    fake.completion = answerWith({
+      ideas: [
+        ...ideas(CHILD_COUNT - 1),
+        idea(`  ${longest}  `, "Idea")
+      ]
+    });
+
+    await expandNode("s1", "A");
+
+    expect(fake.addChildren).toHaveBeenCalledWith(
+      "s1",
+      ["A"],
+      [...descriptions(CHILD_COUNT - 1), "Idea"],
+      [...titles(CHILD_COUNT - 1), longest]
     );
   });
 
@@ -320,7 +434,8 @@ describe("expandNode from two nodes (#73)", () => {
     expect(fake.addChildren).toHaveBeenCalledWith(
       "s1",
       ["A", "B"],
-      ideas()
+      descriptions(),
+      titles()
     );
   });
 
@@ -894,7 +1009,8 @@ describe("expandNode instruction (#52)", () => {
     expect(fake.addChildren).toHaveBeenCalledWith(
       "s1",
       ["A"],
-      ideas()
+      descriptions(),
+      titles()
     );
   });
 });

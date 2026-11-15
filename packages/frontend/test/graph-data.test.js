@@ -342,6 +342,7 @@ describe("getSessionGraph", () => {
               {
                 id: "a",
                 content: "Idea A",
+                title: "Short title",
                 status: "pending",
                 position_x: null,
                 position_y: null
@@ -377,12 +378,20 @@ describe("getSessionGraph", () => {
         {
           id: "r",
           position: { x: 10, y: 20 },
-          data: { content: "Root", status: "pending" }
+          data: {
+            content: "Root",
+            title: null,
+            status: "pending"
+          }
         },
         {
           id: "a",
           position: { x: 0, y: 0 },
-          data: { content: "Idea A", status: "pending" }
+          data: {
+            content: "Idea A",
+            title: "Short title",
+            status: "pending"
+          }
         }
       ],
       edges: [{ id: "e1", source: "r", target: "a" }]
@@ -451,6 +460,27 @@ describe("getExpansionInputs", () => {
     }
   });
 
+  test("does not select the title, so it cannot reach the model (#90)", async () => {
+    fake.client = fakeClient({
+      results: {
+        nodes: [{ data: [], error: null }],
+        edges: [{ data: [], error: null }],
+        preferences: [{ data: [], error: null }]
+      }
+    });
+
+    await getExpansionInputs("s1");
+
+    const nodesCall = fake.client.calls.find(
+      (call) => call.table === "nodes"
+    );
+    const select = nodesCall.ops.find(
+      ([op]) => op === "select"
+    );
+    expect(select[1]).toContain("content");
+    expect(select[1]).not.toContain("title");
+  });
+
   test("throws the Supabase error when a read fails", async () => {
     const failure = new Error("read failed");
     fake.client = fakeClient({
@@ -473,6 +503,7 @@ describe("addChildren", () => {
                 {
                   id: "c1",
                   content: "Child",
+                  title: "Child title",
                   status: "pending",
                   position_x: null,
                   position_y: null
@@ -492,14 +523,23 @@ describe("addChildren", () => {
       }
     });
 
-    const children = await addChildren("s1", "p", ["Child"]);
+    const children = await addChildren(
+      "s1",
+      "p",
+      ["Child"],
+      ["Child title"]
+    );
 
     expect(children).toEqual({
       nodes: [
         {
           id: "c1",
           position: { x: 0, y: 0 },
-          data: { content: "Child", status: "pending" }
+          data: {
+            content: "Child",
+            title: "Child title",
+            status: "pending"
+          }
         }
       ],
       edges: [{ id: "e1", source: "p", target: "c1" }]
@@ -510,9 +550,25 @@ describe("addChildren", () => {
         args: {
           p_session_id: "s1",
           p_parent_node_ids: ["p"],
-          p_contents: ["Child"]
+          p_contents: ["Child"],
+          p_titles: ["Child title"]
         }
       }
+    ]);
+  });
+
+  test("sends a null title for each child when no titles are given", async () => {
+    fake.client = fakeClient({
+      results: {
+        rpc: [{ data: { nodes: [], edges: [] }, error: null }]
+      }
+    });
+
+    await addChildren("s1", "p", ["One", "Two"]);
+
+    expect(fake.client.calls[0].args.p_titles).toEqual([
+      null,
+      null
     ]);
   });
 
@@ -576,7 +632,8 @@ describe("addChildren", () => {
         args: {
           p_session_id: "s1",
           p_parent_node_ids: ["p1", "p2"],
-          p_contents: ["Child"]
+          p_contents: ["Child"],
+          p_titles: [null]
         }
       }
     ]);
@@ -604,7 +661,8 @@ describe("addManualChild", () => {
         args: {
           p_session_id: "s1",
           p_parent_node_ids: ["p1"],
-          p_contents: ["Written child"]
+          p_contents: ["Written child"],
+          p_titles: [null]
         }
       }
     ]);
@@ -635,7 +693,7 @@ describe("addNode", () => {
     expect(node).toEqual({
       id: "n2",
       position: { x: 5, y: 15 },
-      data: { content: "Idea", status: "pending" }
+      data: { content: "Idea", title: null, status: "pending" }
     });
     expect(fake.client.calls[0].ops[0]).toEqual([
       "insert",
@@ -864,7 +922,7 @@ describe("updateNodeStatus", () => {
 });
 
 describe("updateNodeContent", () => {
-  test("updates the content and returns the node", async () => {
+  test("updates the content, leaves the title alone and returns the node", async () => {
     fake.client = fakeClient({
       results: {
         nodes: [
@@ -872,6 +930,7 @@ describe("updateNodeContent", () => {
             data: {
               id: "n1",
               content: "Edited idea",
+              title: "Kept title",
               status: "pending",
               position_x: null,
               position_y: null
@@ -885,6 +944,7 @@ describe("updateNodeContent", () => {
     const node = await updateNodeContent("n1", "Edited idea");
 
     expect(node.data.content).toBe("Edited idea");
+    expect(node.data.title).toBe("Kept title");
     expect(fake.client.calls[0].ops.slice(0, 2)).toEqual([
       ["update", { content: "Edited idea" }],
       ["eq", "id", "n1"]

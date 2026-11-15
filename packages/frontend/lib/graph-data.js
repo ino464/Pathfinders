@@ -4,8 +4,11 @@ import { createClient } from "./supabase-server";
 
 // The columns that toFlowNode reads.
 const FLOW_NODE_COLUMNS =
-  "id, content, status, position_x, position_y";
+  "id, content, title, status, position_x, position_y";
 
+// title is null for the root, manual children, chat and merge
+// nodes, and rows from before it existed. The canvas then shows
+// the content (#90).
 function toFlowNode(node) {
   return {
     id: node.id,
@@ -13,7 +16,11 @@ function toFlowNode(node) {
       x: Number(node.position_x ?? 0),
       y: Number(node.position_y ?? 0)
     },
-    data: { content: node.content, status: node.status }
+    data: {
+      content: node.content,
+      title: node.title ?? null,
+      status: node.status
+    }
   };
 }
 
@@ -299,10 +306,13 @@ export async function addChatTurn(sessionId) {
 // through the add_children_to_parents database function, so a
 // failure leaves no node without a parent. parentIds is one id,
 // or a list of ids when a new idea has several parents (#73).
+// titles has one entry for each entry of contents. Without it,
+// every child gets a null title (#90).
 export async function addChildren(
   sessionId,
   parentIds,
-  contents
+  contents,
+  titles = contents.map(() => null)
 ) {
   const supabase = await createClient();
 
@@ -312,7 +322,8 @@ export async function addChildren(
       p_parent_node_ids: Array.isArray(parentIds)
         ? parentIds
         : [parentIds],
-      p_contents: contents
+      p_contents: contents,
+      p_titles: titles
     })
   );
 

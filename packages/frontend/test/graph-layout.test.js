@@ -2,7 +2,8 @@ import { describe, expect, test } from "vitest";
 import {
   NODE_WIDTH,
   estimateHeight,
-  layoutGraph
+  layoutGraph,
+  nodeLabel
 } from "../lib/graph-layout.js";
 
 // Builds a graph in the shape getSessionGraph returns, with every
@@ -27,7 +28,8 @@ function box(node) {
     left: node.position.x,
     right: node.position.x + NODE_WIDTH,
     top: node.position.y,
-    bottom: node.position.y + estimateHeight(node.data.content)
+    bottom:
+      node.position.y + estimateHeight(nodeLabel(node.data))
   };
 }
 
@@ -148,6 +150,73 @@ describe("layoutGraph", () => {
       x: 0,
       y: 0
     });
+  });
+});
+
+describe("nodeLabel", () => {
+  test("is the title when the node has one", () => {
+    expect(
+      nodeLabel({ title: "Short title", content: long })
+    ).toBe("Short title");
+  });
+
+  test("is the content when the node has no title", () => {
+    expect(nodeLabel({ title: null, content: "Root" })).toBe(
+      "Root"
+    );
+    expect(nodeLabel({ content: "Root" })).toBe("Root");
+  });
+
+  test("is empty when the node has neither", () => {
+    expect(nodeLabel({})).toBe("");
+    expect(nodeLabel(undefined)).toBe("");
+  });
+});
+
+describe("layoutGraph with titles (#90)", () => {
+  // Two siblings with long content and a short title. The layout
+  // reserves room for the title, which is all the node shows, so
+  // their tops are one short node height plus the node gap apart.
+  test("sizes a node from its title, not its content", () => {
+    const graph = {
+      nodes: ["R", "A", "B"].map((id) => ({
+        id,
+        position: { x: 0, y: 0 },
+        data: {
+          content: long,
+          title: id === "R" ? null : "Short title",
+          status: "pending"
+        }
+      })),
+      edges: [
+        { id: "R-A", source: "R", target: "A" },
+        { id: "R-B", source: "R", target: "B" }
+      ]
+    };
+
+    const nodes = byId(layoutGraph(graph));
+    const gap = Math.abs(
+      nodes.A.position.y - nodes.B.position.y
+    );
+
+    expect(gap).toBeCloseTo(estimateHeight("Short title") + 30);
+  });
+
+  test("sizes a node without a title from its content", () => {
+    const graph = sessionGraph(
+      { R: "Root", A: long, B: long },
+      [
+        ["R", "A"],
+        ["R", "B"]
+      ]
+    );
+
+    const nodes = byId(layoutGraph(graph));
+    const gap = Math.abs(
+      nodes.A.position.y - nodes.B.position.y
+    );
+
+    expect(gap).toBeCloseTo(estimateHeight(long) + 30);
   });
 });
 

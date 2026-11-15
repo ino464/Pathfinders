@@ -71,11 +71,14 @@ Notes on the functions:
   in `lib/supabase-server.js`. That client reads the session
   cookie, so every query runs as the signed-in user.
 - `getSessionGraph` returns `{ nodes, edges }` in the shape
-  React Flow uses, so the canvas does not reshape data.
+  React Flow uses, so the canvas does not reshape data. Each
+  node's `data` is `{ content, title, status }`, and `title` is
+  `null` for a node without one (#90).
 - `getExpansionInputs` returns the raw rows that context
   assembly needs: nodes with `created_at` and `deleted_at`,
   edges, and preferences. It includes deleted nodes, because
-  context assembly decides how to treat them.
+  context assembly decides how to treat them. It does not select
+  `title`, so a title cannot reach the model (#90).
 - `listPreferences` returns a session's preferences in
   `created_at` order, then `id` order. Context assembly joins
   them in the same order, so the preferences panel on the
@@ -86,7 +89,12 @@ Notes on the functions:
   and an edge from every parent to every child through the
   `add_children_to_parents` database function, in one
   transaction. If any insert fails, nothing is written, so a
-  failed expansion cannot leave a node without a parent.
+  failed expansion cannot leave a node without a parent. The
+  function takes `p_contents` and `p_titles`, two lists of the
+  same length, and fails when the lengths differ (#90).
+  `addChildren(sessionId, parentIds, contents, titles)` sends a
+  `null` title for each child when `titles` is left out, which
+  is how `addManualChild` writes a node.
 - Because everything goes through these functions, the canvas
   (#33) can be built against fixture data, and tests can replace
   the Supabase client with a fake one.
@@ -127,13 +135,45 @@ group of the selection panel. Clicking the set flag again saves
 `pending`. The status is a label for the user only: context
 assembly, expansion, pruning and the layout do not read it.
 
+### Node titles
+
+Each expansion asks the model for a short title (3 to 6 words)
+and a description for every idea, in the same Groq request
+(#90). The description is stored in `nodes.content`, and the
+title in the nullable `nodes.title` column, added by the
+migration `20261114120000_add_node_title.sql`. That migration
+also replaces `add_children_to_parents` with a version that
+takes `p_titles`. `parseIdeas` in `lib/expand.js` refuses an
+empty title or one longer than 60 characters, and an invalid
+answer is still a `502` with nothing written.
+
+A node on the canvas shows its title, and a node without one
+shows its content. The selection panel above the canvas shows
+the content, so selecting a node reveals its description.
+`nodeLabel` in `lib/graph-layout.js` holds that rule, so the
+node and the layout agree on what is shown.
+
+`title` is `null` for the root, for manual children, for rows
+that exist from before the migration, and for nodes from chat
+(#71) and merge (#73). Editing a node's text does not change its
+title (Tyler, 2026-11-04), so after an edit the title can stop
+matching the description.
+
+The title is for the canvas only. Context assembly and the
+instruction read `content`, never `title`, and tests in
+`test/context-assembly.test.js`, `test/graph-data.test.js` and
+`test/expand.test.js` check that a title is not in what the
+model receives.
+
 ### Session graph layout
 
 Node positions are computed each time a graph loads.
 `layoutGraph` in `lib/graph-layout.js` uses dagre to place the
 nodes from left to right, starting at the root. The browser
 measures a node only after it renders, so `layoutGraph`
-estimates each node's height from the length of its text.
+estimates each node's height from the length of the text the
+node shows, which is its title, or its content when it has no
+title.
 
 The `position_x` and `position_y` columns exist, but nothing
 writes them and the canvas ignores them. They stay for a later

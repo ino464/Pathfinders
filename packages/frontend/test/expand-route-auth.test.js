@@ -114,7 +114,13 @@ describe("POST /api/expand across users", () => {
   beforeEach(() => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     fake.groq = vi.fn(async () =>
-      JSON.stringify({ ideas: ["One", "Two", "Three"] })
+      JSON.stringify({
+        ideas: [
+          { title: "Title one", description: "One" },
+          { title: "Title two", description: "Two" },
+          { title: "Title three", description: "Three" }
+        ]
+      })
     );
   });
 
@@ -160,7 +166,8 @@ describe("POST /api/expand across users", () => {
         args: {
           p_session_id: SESSION_A,
           p_parent_node_ids: [ROOT_A],
-          p_contents: ["One", "Two", "Three"]
+          p_contents: ["One", "Two", "Three"],
+          p_titles: ["Title one", "Title two", "Title three"]
         }
       }
     ]);
