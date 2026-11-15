@@ -8,6 +8,13 @@ const LINE_HEIGHT = 14 * 1.3;
 // Fewer characters than fit, because words wrap early.
 const CHARS_PER_LINE = 20;
 
+// The text a node shows on the canvas: its title, or its content
+// when it has none (#90). The node and the layout both use this,
+// so the space reserved matches what is drawn.
+export function nodeLabel(data) {
+  return data?.title ?? data?.content ?? "";
+}
+
 // The browser measures a node only after it renders, so the
 // layout estimates the height from the length of the text.
 export function estimateHeight(content) {
@@ -30,7 +37,7 @@ export function layoutGraph({ nodes, edges }) {
   for (const node of nodes) {
     graph.setNode(node.id, {
       width: NODE_WIDTH,
-      height: estimateHeight(node.data?.content)
+      height: estimateHeight(nodeLabel(node.data))
     });
   }
   for (const edge of edges) {

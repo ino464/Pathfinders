@@ -14,7 +14,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { requestBrainstorm } from "../lib/expand-client";
 import { highlightSelection } from "../lib/graph-highlight";
-import { layoutGraph } from "../lib/graph-layout";
+import { layoutGraph, nodeLabel } from "../lib/graph-layout";
 import { FLAGS, nextFlagStatus } from "../lib/node-status";
 import { useNodeSelection } from "./use-node-selection";
 import {
@@ -55,7 +55,7 @@ function SessionNode({ data, selected }) {
         />
       )}
       <span className="session-node__label">
-        {data.content}
+        {nodeLabel(data)}
       </span>
       <Handle type="source" position={Position.Right} />
     </div>
