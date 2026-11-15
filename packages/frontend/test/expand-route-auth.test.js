@@ -166,7 +166,8 @@ describe("POST /api/expand across users", () => {
         args: {
           p_session_id: SESSION_A,
           p_parent_node_ids: [ROOT_A],
-          p_contents: ["One", "Two", "Three"]
+          p_contents: ["One", "Two", "Three"],
+          p_titles: ["Title one", "Title two", "Title three"]
         }
       }
     ]);
