@@ -129,8 +129,8 @@ Suggest 3 new ideas that combine the two ideas the user selected above. The last
 9. A missing, `null` or blank `instruction` behaves as no
    direction.
 10. The answer must be JSON with an `ideas` array of exactly 3
-    objects, each with a `title` and a `description` (#90). After
-    trimming, a title must be non-empty and at most 60
+    objects, each with a `title` and a `description` (#90).
+    After trimming, a title must be non-empty and at most 60
     characters. A description must be non-empty and at most 300
     characters, and no two descriptions may be equal ignoring
     case. Otherwise the expansion fails with 502 and nothing is

@@ -378,7 +378,11 @@ describe("getSessionGraph", () => {
         {
           id: "r",
           position: { x: 10, y: 20 },
-          data: { content: "Root", title: null, status: "pending" }
+          data: {
+            content: "Root",
+            title: null,
+            status: "pending"
+          }
         },
         {
           id: "a",
@@ -470,7 +474,9 @@ describe("getExpansionInputs", () => {
     const nodesCall = fake.client.calls.find(
       (call) => call.table === "nodes"
     );
-    const select = nodesCall.ops.find(([op]) => op === "select");
+    const select = nodesCall.ops.find(
+      ([op]) => op === "select"
+    );
     expect(select[1]).toContain("content");
     expect(select[1]).not.toContain("title");
   });

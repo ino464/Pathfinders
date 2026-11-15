@@ -194,9 +194,9 @@ describe("expandNode", () => {
     for (const [messages] of fake.completion.mock.calls) {
       expect(JSON.stringify(messages)).not.toContain("Zebra");
     }
-    expect(fake.completion.mock.calls[0][0].at(-1).content).toContain(
-      "- Idea A\n- Idea B"
-    );
+    expect(
+      fake.completion.mock.calls[0][0].at(-1).content
+    ).toContain("- Idea A\n- Idea B");
   });
 
   test("trims each title and description before it is written", async () => {

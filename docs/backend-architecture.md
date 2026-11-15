@@ -93,8 +93,8 @@ Notes on the functions:
   function takes `p_contents` and `p_titles`, two lists of the
   same length, and fails when the lengths differ (#90).
   `addChildren(sessionId, parentIds, contents, titles)` sends a
-  `null` title for each child when `titles` is left out, which is
-  how `addManualChild` writes a node.
+  `null` title for each child when `titles` is left out, which
+  is how `addManualChild` writes a node.
 - Because everything goes through these functions, the canvas
   (#33) can be built against fixture data, and tests can replace
   the Supabase client with a fake one.
@@ -142,10 +142,10 @@ and a description for every idea, in the same Groq request
 (#90). The description is stored in `nodes.content`, and the
 title in the nullable `nodes.title` column, added by the
 migration `20261114120000_add_node_title.sql`. That migration
-also replaces `add_children_to_parents` with a version that takes
-`p_titles`. `parseIdeas` in `lib/expand.js` refuses an empty
-title or one longer than 60 characters, and an invalid answer is
-still a `502` with nothing written.
+also replaces `add_children_to_parents` with a version that
+takes `p_titles`. `parseIdeas` in `lib/expand.js` refuses an
+empty title or one longer than 60 characters, and an invalid
+answer is still a `502` with nothing written.
 
 A node on the canvas shows its title, and a node without one
 shows its content. The selection panel above the canvas shows
