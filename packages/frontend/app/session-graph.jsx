@@ -302,6 +302,7 @@ export function SessionGraph({ graph, sessionId }) {
         throw new Error("The node text could not be saved.");
       replaceNode(node);
       setNodeText(node.data.content);
+      endChat();
     } catch (err) {
       setError(
         err.message ?? "The node text could not be saved."
