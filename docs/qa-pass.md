@@ -26,7 +26,7 @@ and saved text.
 | FR-01 | Expand a selected idea         | Pass              | Brainstorm from the root gave 3 titled ideas in about 3 s. They stayed after a reload.                                                                                                                                   | —     |
 | FR-02 | Add and edit ideas             | Pass, with defect | **Add child** added "Kayak relay race" under the selected idea. **Save text** saved the new text, but the card still shows the old title.                                                                                | #121  |
 | FR-03 | View history, switch branches  | Pass              | The session list opens each session with all its ideas. Selecting an idea in another branch highlights that branch. See the note on chat history below.                                                                  | —     |
-| FR-04 | Log in and resume work         | Partly checked    | The signed-in account opened its saved sessions. Sign-out and sign-in on the hosted app were not done in this pass. The UI tests (#93) cover email sign-in locally.                                                      | —     |
+| FR-04 | Log in and resume work         | Pass              | After sign-out, the app went to `/login`, and the session URL redirected to `/login`. After sign-in with email, the session opened with its 8 ideas, the liked idea and the preference.                                  | —     |
 | FR-05 | Like and dislike, recorded     | Pass              | Like and dislike showed a stripe. Both stayed after a reload and are in the export. The idea did not move (fixed in #119).                                                                                               | —     |
 | FR-06 | Develop an earlier idea again  | Pass              | From the root, the direction "Indoor only, for a rainy day" gave 3 new indoor ideas as a new branch.                                                                                                                     | —     |
 | FR-07 | Delete branches and sessions   | Pass, with defect | **Delete branch** asked first, then removed the idea and its 3 descendants. Deleting one parent of a two-parent idea kept that idea under its other parent. Deleting a session removed it at once, with no confirmation. | #123  |
@@ -58,9 +58,6 @@ Edge routing across levels was also seen. It is already in #110.
   "view their full chat history". If "chat" there means the chat
   panel and not a session, FR-03 is only partly met. #107 can
   settle the wording.
-- **FR-04 on hosted.** Sign out and sign in again with email on
-  the hosted app before the final demo. That step needs a
-  password, so it was not part of this pass.
 
 ## Automated checks on the same day
 
