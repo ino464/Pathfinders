@@ -255,11 +255,14 @@ export function SessionGraph({ graph, sessionId }) {
     setComposerMode(mode);
   }
 
+  // The saved node carries the stored position, which is empty
+  // because layoutGraph places every node (#70). Only its data is
+  // taken, so the node keeps its place on the canvas.
   function replaceNode(updatedNode) {
     setNodes((currentNodes) =>
       currentNodes.map((node) =>
         node.id === updatedNode.id
-          ? { ...updatedNode, type: "session" }
+          ? { ...node, data: updatedNode.data }
           : node
       )
     );

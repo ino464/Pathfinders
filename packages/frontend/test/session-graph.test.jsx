@@ -39,6 +39,8 @@ vi.mock("../app/sessions/[id]/node-actions", () => ({
 }));
 
 const { SessionGraph } = await import("../app/session-graph");
+const { setNodeStatusAction } =
+  await import("../app/sessions/[id]/node-actions");
 
 // React Flow measures the canvas with ResizeObserver, which jsdom
 // does not have
@@ -90,6 +92,13 @@ function clickIdea(text, options = {}) {
 function selectionText() {
   return document.querySelector(".session-graph__selection > p")
     .textContent;
+}
+
+function canvasNode(text) {
+  return screen
+    .getAllByText(text)
+    .map((el) => el.closest(".react-flow__node"))
+    .find(Boolean);
 }
 
 function selectBrainstormMode() {
@@ -175,6 +184,32 @@ describe("SessionGraph selection", () => {
     clickIdea("Pizza", { shiftKey: true });
 
     expect(selectionText()).toBe("Selected idea: Pizza");
+  });
+
+  test("a liked idea keeps its place on the canvas", async () => {
+    // the saved node comes back with the stored position, which
+    // is empty
+    setNodeStatusAction.mockResolvedValueOnce({
+      id: "left",
+      position: { x: 0, y: 0 },
+      data: { content: "Tacos", status: "accepted" }
+    });
+    renderGraph();
+    clickIdea("Tacos");
+    const before = canvasNode("Tacos").style.transform;
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Flag as liked" })
+    );
+
+    await waitFor(() =>
+      expect(
+        canvasNode("Tacos").querySelector(
+          ".session-node__stripe--accepted"
+        )
+      ).toBeTruthy()
+    );
+    expect(canvasNode("Tacos").style.transform).toBe(before);
   });
 
   test("brainstorming from two ideas sends both and shows the new idea", async () => {
