@@ -8,33 +8,17 @@ async function readGuestIds(file) {
   return text.split("\n").filter(Boolean);
 }
 
+// Deleting the sessions removes their nodes, edges and preferences
+// by cascade. Deleting the nodes first can fail: the
+// nodes_touch_session trigger updates the session row while it
+// still points at a deleted root node, so the
+// sessions_root_node_id_fkey check fails.
 async function deleteUserAndData(admin, userId) {
-  const { data: sessions, error } = await admin
+  const rows = await admin
     .from("sessions")
-    .select("id")
+    .delete()
     .eq("user_id", userId);
-  if (error) return error;
-
-  const sessionIds = sessions.map((session) => session.id);
-  if (sessionIds.length > 0) {
-    const preferences = await admin
-      .from("preferences")
-      .delete()
-      .in("session_id", sessionIds);
-    if (preferences.error) return preferences.error;
-
-    const nodes = await admin
-      .from("nodes")
-      .delete()
-      .in("session_id", sessionIds);
-    if (nodes.error) return nodes.error;
-
-    const rows = await admin
-      .from("sessions")
-      .delete()
-      .in("id", sessionIds);
-    if (rows.error) return rows.error;
-  }
+  if (rows.error) return rows.error;
 
   const user = await admin.auth.admin.deleteUser(userId);
   return user.error;
