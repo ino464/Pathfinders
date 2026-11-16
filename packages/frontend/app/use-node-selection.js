@@ -13,13 +13,15 @@ import {
 // (#94). The composer (#72) reads the same selection. onChange
 // receives the new ids after each change, so a chat can end when
 // the selection changes.
-export function useNodeSelection(onChange) {
+export function useNodeSelection(onChange, beforeChange) {
   const [selectedIds, setSelectedIds] = useState([]);
   const onChangeRef = useRef(onChange);
+  const beforeChangeRef = useRef(beforeChange);
   const reportedIds = useRef(selectedIds);
 
   useEffect(() => {
     onChangeRef.current = onChange;
+    beforeChangeRef.current = beforeChange;
   });
 
   useEffect(() => {
@@ -30,12 +32,19 @@ export function useNodeSelection(onChange) {
 
   // keeps the old array when nothing changed, so a click on the
   // only selected node does not report a change
-  const update = useCallback((next) => {
-    setSelectedIds((current) => {
-      const ids = next(current);
-      return sameSelection(current, ids) ? current : ids;
-    });
-  }, []);
+  const update = useCallback(
+    (next, skipBeforeChange = false) => {
+      setSelectedIds((current) => {
+        const ids = next(current);
+        if (sameSelection(current, ids)) return current;
+        return !skipBeforeChange &&
+          beforeChangeRef.current?.(ids, current) === false
+          ? current
+          : ids;
+      });
+    },
+    []
+  );
 
   const clickNode = useCallback(
     (nodeId, additive) =>
@@ -45,7 +54,11 @@ export function useNodeSelection(onChange) {
     [update]
   );
 
-  const clear = useCallback(() => update(() => []), [update]);
+  const clear = useCallback(
+    (skipBeforeChange = false) =>
+      update(() => [], skipBeforeChange),
+    [update]
+  );
 
   return { selectedIds, clickNode, clear };
 }

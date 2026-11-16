@@ -12,10 +12,13 @@ import {
   useNodesState
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { requestChat } from "../lib/chat-client";
 import { requestBrainstorm } from "../lib/expand-client";
 import { highlightSelection } from "../lib/graph-highlight";
 import { layoutGraph, nodeLabel } from "../lib/graph-layout";
 import { FLAGS, nextFlagStatus } from "../lib/node-status";
+import { ChatPanel } from "./chat-panel";
+import { SessionComposer } from "./session-composer";
 import { useNodeSelection } from "./use-node-selection";
 import {
   addManualChildAction,
@@ -76,19 +79,25 @@ export function SessionGraph({ graph, sessionId }) {
     canvasGraph.edges
   );
   const [isExpanding, setIsExpanding] = useState(false);
+  const [isChatting, setIsChatting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [composerMode, setComposerMode] = useState("chat");
+  const [chatTurns, setChatTurns] = useState([]);
+  const [chatError, setChatError] = useState(null);
   const [nodeText, setNodeText] = useState("");
   const [childText, setChildText] = useState("");
   const [error, setError] = useState(null);
-  const { selectedIds, clickNode, clear } =
-    useNodeSelection(resetForms);
+  const { selectedIds, clickNode, clear } = useNodeSelection(
+    resetForms,
+    confirmSelectionChange
+  );
   const selectedNodes = selectedIds
     .map((id) => nodes.find((node) => node.id === id))
     .filter(Boolean);
   // the single-node actions need exactly one selected node
   const selectedNode =
     selectedNodes.length === 1 ? selectedNodes[0] : null;
-  const isBusy = isExpanding || isSaving;
+  const isBusy = isExpanding || isChatting || isSaving;
 
   // the selection's ancestors and children stay clear, and the
   // other ideas and edges fade
@@ -142,6 +151,24 @@ export function SessionGraph({ graph, sessionId }) {
     setError(null);
   }
 
+  function confirmSelectionChange() {
+    if (chatTurns.length === 0) return true;
+    if (
+      !window.confirm(
+        "Changing the selected ideas will end this chat. Continue?"
+      )
+    ) {
+      return false;
+    }
+    endChat();
+    return true;
+  }
+
+  function endChat() {
+    setChatTurns([]);
+    setChatError(null);
+  }
+
   function selectNode(event, node) {
     clickNode(
       node.id,
@@ -174,6 +201,58 @@ export function SessionGraph({ graph, sessionId }) {
     } finally {
       setIsExpanding(false);
     }
+  }
+
+  async function chat(message) {
+    if (
+      selectedNodes.length === 0 ||
+      isBusy ||
+      message.trim() === ""
+    ) {
+      return;
+    }
+
+    const userTurn = { role: "user", content: message.trim() };
+    setIsChatting(true);
+    setChatError(null);
+    setChatTurns((currentTurns) => [...currentTurns, userTurn]);
+    try {
+      const reply = await requestChat(
+        sessionId,
+        selectedNodes.map((node) => node.id),
+        chatTurns,
+        userTurn.content
+      );
+      setChatTurns((currentTurns) => [
+        ...currentTurns,
+        { role: "assistant", content: reply }
+      ]);
+    } catch (err) {
+      setChatError(err.message ?? "The chat reply failed.");
+    } finally {
+      setIsChatting(false);
+    }
+  }
+
+  function sendComposer(message) {
+    if (composerMode === "chat") return chat(message);
+    return brainstorm(message);
+  }
+
+  function changeComposerMode(mode) {
+    if (mode === composerMode) return;
+    if (chatTurns.length > 0) {
+      if (
+        !window.confirm(
+          "Changing the mode will end this chat. Continue?"
+        )
+      ) {
+        return;
+      }
+      setChatTurns([]);
+      setChatError(null);
+    }
+    setComposerMode(mode);
   }
 
   function replaceNode(updatedNode) {
@@ -223,6 +302,7 @@ export function SessionGraph({ graph, sessionId }) {
         throw new Error("The node text could not be saved.");
       replaceNode(node);
       setNodeText(node.data.content);
+      endChat();
     } catch (err) {
       setError(
         err.message ?? "The node text could not be saved."
@@ -288,7 +368,8 @@ export function SessionGraph({ graph, sessionId }) {
             !deleted.has(edge.target)
         )
       );
-      clear();
+      endChat();
+      clear(true);
     } catch (err) {
       setError(
         err.message ?? "The branch could not be deleted."
@@ -320,12 +401,20 @@ export function SessionGraph({ graph, sessionId }) {
             idea to combine the two.
           </p>
         )}
-        <button
-          type="button"
-          onClick={() => brainstorm()}
-          disabled={selectedNodes.length === 0 || isBusy}>
-          {isExpanding ? "Expanding…" : "Expand"}
-        </button>
+        <SessionComposer
+          mode={composerMode}
+          onModeChange={changeComposerMode}
+          onSubmit={sendComposer}
+          isPending={isExpanding || isChatting}
+          disabled={selectedNodes.length === 0 || isSaving}
+        />
+        {composerMode === "chat" && (
+          <ChatPanel
+            turns={chatTurns}
+            isPending={isChatting}
+            error={chatError}
+          />
+        )}
         <fieldset className="session-graph__markers">
           <legend>Markers</legend>
           {Object.entries(FLAGS).map(([status, flag]) => (
