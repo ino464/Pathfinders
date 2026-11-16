@@ -235,6 +235,22 @@ export function SessionGraph({ graph, sessionId }) {
     return brainstorm(message);
   }
 
+  function changeComposerMode(mode) {
+    if (mode === composerMode) return;
+    if (chatTurns.length > 0) {
+      if (
+        !window.confirm(
+          "Changing the mode will end this chat. Continue?"
+        )
+      ) {
+        return;
+      }
+      setChatTurns([]);
+      setChatError(null);
+    }
+    setComposerMode(mode);
+  }
+
   function replaceNode(updatedNode) {
     setNodes((currentNodes) =>
       currentNodes.map((node) =>
@@ -381,7 +397,7 @@ export function SessionGraph({ graph, sessionId }) {
         )}
         <SessionComposer
           mode={composerMode}
-          onModeChange={setComposerMode}
+          onModeChange={changeComposerMode}
           onSubmit={sendComposer}
           isPending={isExpanding || isChatting}
           disabled={selectedNodes.length === 0 || isSaving}
