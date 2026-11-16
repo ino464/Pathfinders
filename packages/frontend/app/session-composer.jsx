@@ -42,11 +42,7 @@ export function SessionComposer({
             key={value}
             type="button"
             aria-pressed={mode === value}
-            className={
-              mode === value
-                ? "session-composer__mode is-active"
-                : "session-composer__mode"
-            }
+            className="session-composer__mode"
             onClick={() => onModeChange(value)}
             disabled={disabled || isPending}>
             {details.label}
@@ -69,7 +65,11 @@ export function SessionComposer({
       <button
         className="session-composer__send"
         type="submit"
-        disabled={disabled || isPending}>
+        disabled={
+          disabled ||
+          isPending ||
+          (mode === "chat" && message.trim() === "")
+        }>
         {isPending ? "Sending…" : "Send"}
       </button>
     </form>
