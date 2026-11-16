@@ -66,7 +66,13 @@ Edge routing across levels was also seen. It is already in #110.
 
 - Vitest: 384 tests in 28 files pass.
 - Playwright: 6 tests pass, including the new guest flow in
-  `ui-test/guest-flow.spec.js`. This run used local Supabase.
+  `ui-test/guest-flow.spec.js`, against local Supabase and
+  against hosted Supabase. On hosted, the first run left one
+  guest user behind: teardown deleted the nodes before the
+  session, and the `sessions_root_node_id_fkey` check failed.
+  Teardown now deletes the sessions, which removes their nodes
+  by cascade. After the change, a hosted run left no test users
+  or sessions.
 - Hosted migration history: all 6 migrations in
   `supabase/migrations` are recorded in
   `supabase_migrations.schema_migrations`.
