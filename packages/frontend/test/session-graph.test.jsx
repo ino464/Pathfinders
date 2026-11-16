@@ -39,6 +39,8 @@ vi.mock("../app/sessions/[id]/node-actions", () => ({
 }));
 
 const { SessionGraph } = await import("../app/session-graph");
+const { setNodeStatusAction } =
+  await import("../app/sessions/[id]/node-actions");
 
 // React Flow measures the canvas with ResizeObserver, which jsdom
 // does not have
@@ -87,9 +89,20 @@ function clickIdea(text, options = {}) {
   fireEvent.click(screen.getByText(text), options);
 }
 
-function selectionText() {
-  return document.querySelector(".session-graph__selection > p")
-    .textContent;
+// the heading, then one line per selected idea
+function selectionLines() {
+  return [
+    ...document.querySelectorAll(
+      ".session-graph__selected p, .session-graph__selected li"
+    )
+  ].map((el) => el.textContent);
+}
+
+function canvasNode(text) {
+  return screen
+    .getAllByText(text)
+    .map((el) => el.closest(".react-flow__node"))
+    .find(Boolean);
 }
 
 function selectBrainstormMode() {
@@ -114,7 +127,10 @@ describe("SessionGraph selection", () => {
 
     clickIdea("Tacos");
 
-    expect(selectionText()).toBe("Selected idea: Tacos");
+    expect(selectionLines()).toEqual([
+      "Selected idea:",
+      "Tacos"
+    ]);
     expect(
       screen.getByRole("button", { name: "Delete branch" })
         .disabled
@@ -148,9 +164,11 @@ describe("SessionGraph selection", () => {
     clickIdea("Sushi", { shiftKey: true });
     selectBrainstormMode();
 
-    expect(selectionText()).toBe(
-      "Selected ideas: Tacos and Sushi"
-    );
+    expect(selectionLines()).toEqual([
+      "Selected ideas:",
+      "Tacos",
+      "Sushi"
+    ]);
     expect(
       screen.getByRole("button", { name: "Send" }).disabled
     ).toBe(false);
@@ -174,7 +192,36 @@ describe("SessionGraph selection", () => {
     clickIdea("Sushi", { shiftKey: true });
     clickIdea("Pizza", { shiftKey: true });
 
-    expect(selectionText()).toBe("Selected idea: Pizza");
+    expect(selectionLines()).toEqual([
+      "Selected idea:",
+      "Pizza"
+    ]);
+  });
+
+  test("a liked idea keeps its place on the canvas", async () => {
+    // the saved node comes back with the stored position, which
+    // is empty
+    setNodeStatusAction.mockResolvedValueOnce({
+      id: "left",
+      position: { x: 0, y: 0 },
+      data: { content: "Tacos", status: "accepted" }
+    });
+    renderGraph();
+    clickIdea("Tacos");
+    const before = canvasNode("Tacos").style.transform;
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Flag as liked" })
+    );
+
+    await waitFor(() =>
+      expect(
+        canvasNode("Tacos").querySelector(
+          ".session-node__stripe--accepted"
+        )
+      ).toBeTruthy()
+    );
+    expect(canvasNode("Tacos").style.transform).toBe(before);
   });
 
   test("brainstorming from two ideas sends both and shows the new idea", async () => {
