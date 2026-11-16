@@ -89,9 +89,13 @@ function clickIdea(text, options = {}) {
   fireEvent.click(screen.getByText(text), options);
 }
 
-function selectionText() {
-  return document.querySelector(".session-graph__selection > p")
-    .textContent;
+// the heading, then one line per selected idea
+function selectionLines() {
+  return [
+    ...document.querySelectorAll(
+      ".session-graph__selected p, .session-graph__selected li"
+    )
+  ].map((el) => el.textContent);
 }
 
 function canvasNode(text) {
@@ -123,7 +127,10 @@ describe("SessionGraph selection", () => {
 
     clickIdea("Tacos");
 
-    expect(selectionText()).toBe("Selected idea: Tacos");
+    expect(selectionLines()).toEqual([
+      "Selected idea:",
+      "Tacos"
+    ]);
     expect(
       screen.getByRole("button", { name: "Delete branch" })
         .disabled
@@ -157,9 +164,11 @@ describe("SessionGraph selection", () => {
     clickIdea("Sushi", { shiftKey: true });
     selectBrainstormMode();
 
-    expect(selectionText()).toBe(
-      "Selected ideas: Tacos and Sushi"
-    );
+    expect(selectionLines()).toEqual([
+      "Selected ideas:",
+      "Tacos",
+      "Sushi"
+    ]);
     expect(
       screen.getByRole("button", { name: "Send" }).disabled
     ).toBe(false);
@@ -183,7 +192,10 @@ describe("SessionGraph selection", () => {
     clickIdea("Sushi", { shiftKey: true });
     clickIdea("Pizza", { shiftKey: true });
 
-    expect(selectionText()).toBe("Selected idea: Pizza");
+    expect(selectionLines()).toEqual([
+      "Selected idea:",
+      "Pizza"
+    ]);
   });
 
   test("a liked idea keeps its place on the canvas", async () => {

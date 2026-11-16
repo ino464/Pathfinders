@@ -36,8 +36,21 @@ h1 {
   margin: 0;
 }
 
-/* one line, so a long selection does not move the canvas */
-.session-graph__selection > p:first-child {
+/* a heading and one line per selected idea. The block keeps the
+   height of three lines, so a change of selection does not move
+   the canvas. */
+.session-graph__selected {
+  min-height: 4.2em;
+  line-height: 1.4;
+}
+
+.session-graph__selected ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session-graph__selected li {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

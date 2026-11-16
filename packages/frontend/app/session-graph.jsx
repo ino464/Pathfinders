@@ -387,23 +387,31 @@ export function SessionGraph({ graph, sessionId }) {
       <div
         className="session-graph__selection"
         aria-live="polite">
-        {selectedNodes.length === 2 ? (
-          <p>
-            Selected ideas:{" "}
-            <strong>{selectedNodes[0].data.content}</strong> and{" "}
-            <strong>{selectedNodes[1].data.content}</strong>
-          </p>
-        ) : selectedNode ? (
-          <p>
-            Selected idea:{" "}
-            <strong>{selectedNode.data.content}</strong>
-          </p>
-        ) : (
-          <p>
-            Select an idea to expand it. Shift-click a second
-            idea to combine the two.
-          </p>
-        )}
+        {/* each selected idea has its own line, so a long idea
+            does not push the other one out of view */}
+        <div className="session-graph__selected">
+          {selectedNodes.length > 0 ? (
+            <>
+              <p>
+                {selectedNodes.length === 2
+                  ? "Selected ideas:"
+                  : "Selected idea:"}
+              </p>
+              <ul>
+                {selectedNodes.map((node) => (
+                  <li key={node.id} title={node.data.content}>
+                    <strong>{node.data.content}</strong>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p>
+              Select an idea to expand it. Shift-click a second
+              idea to combine the two.
+            </p>
+          )}
+        </div>
         <SessionComposer
           mode={composerMode}
           onModeChange={changeComposerMode}
