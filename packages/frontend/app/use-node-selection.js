@@ -32,15 +32,19 @@ export function useNodeSelection(onChange, beforeChange) {
 
   // keeps the old array when nothing changed, so a click on the
   // only selected node does not report a change
-  const update = useCallback((next) => {
-    setSelectedIds((current) => {
-      const ids = next(current);
-      if (sameSelection(current, ids)) return current;
-      return beforeChangeRef.current?.(ids, current) === false
-        ? current
-        : ids;
-    });
-  }, []);
+  const update = useCallback(
+    (next, skipBeforeChange = false) => {
+      setSelectedIds((current) => {
+        const ids = next(current);
+        if (sameSelection(current, ids)) return current;
+        return !skipBeforeChange &&
+          beforeChangeRef.current?.(ids, current) === false
+          ? current
+          : ids;
+      });
+    },
+    []
+  );
 
   const clickNode = useCallback(
     (nodeId, additive) =>
@@ -50,7 +54,11 @@ export function useNodeSelection(onChange, beforeChange) {
     [update]
   );
 
-  const clear = useCallback(() => update(() => []), [update]);
+  const clear = useCallback(
+    (skipBeforeChange = false) =>
+      update(() => [], skipBeforeChange),
+    [update]
+  );
 
   return { selectedIds, clickNode, clear };
 }

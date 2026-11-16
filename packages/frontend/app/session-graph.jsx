@@ -160,9 +160,13 @@ export function SessionGraph({ graph, sessionId }) {
     ) {
       return false;
     }
+    endChat();
+    return true;
+  }
+
+  function endChat() {
     setChatTurns([]);
     setChatError(null);
-    return true;
   }
 
   function selectNode(event, node) {
@@ -363,7 +367,8 @@ export function SessionGraph({ graph, sessionId }) {
             !deleted.has(edge.target)
         )
       );
-      clear();
+      endChat();
+      clear(true);
     } catch (err) {
       setError(
         err.message ?? "The branch could not be deleted."
