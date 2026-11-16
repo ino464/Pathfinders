@@ -16,7 +16,14 @@ import {
   vi
 } from "vitest";
 
-const fake = vi.hoisted(() => ({ requestBrainstorm: null }));
+const fake = vi.hoisted(() => ({
+  requestBrainstorm: null,
+  requestChat: null
+}));
+
+vi.mock("../lib/chat-client", () => ({
+  requestChat: (...args) => fake.requestChat(...args)
+}));
 
 vi.mock("../lib/expand-client", () => ({
   requestBrainstorm: (...args) =>
@@ -85,12 +92,21 @@ function selectionText() {
     .textContent;
 }
 
+function selectBrainstormMode() {
+  fireEvent.click(
+    screen.getByRole("button", { name: "Brainstorm" })
+  );
+}
+
 describe("SessionGraph selection", () => {
   beforeEach(() => {
     fake.requestBrainstorm = vi.fn(async () => ({
       nodes: [node("new", "Sushi tacos")],
       edges: [edge("left", "new"), edge("right", "new")]
     }));
+    fake.requestChat = vi.fn(
+      async () => "They are both dinners."
+    );
   });
 
   test("a click selects one idea and enables its actions", () => {
@@ -125,17 +141,18 @@ describe("SessionGraph selection", () => {
     expect(faded()).toEqual(["Pizza"]);
   });
 
-  test("a Shift-click selects a second idea and disables the single-idea actions", () => {
+  test("a Shift-click selects a second idea and enables brainstorm", () => {
     renderGraph();
 
     clickIdea("Tacos");
     clickIdea("Sushi", { shiftKey: true });
+    selectBrainstormMode();
 
     expect(selectionText()).toBe(
       "Selected ideas: Tacos and Sushi"
     );
     expect(
-      screen.getByRole("button", { name: "Expand" }).disabled
+      screen.getByRole("button", { name: "Send" }).disabled
     ).toBe(false);
     for (const name of [
       "Flag as liked",
@@ -165,8 +182,9 @@ describe("SessionGraph selection", () => {
 
     clickIdea("Tacos");
     clickIdea("Sushi", { metaKey: true });
+    selectBrainstormMode();
     fireEvent.click(
-      screen.getByRole("button", { name: "Expand" })
+      screen.getByRole("button", { name: "Send" })
     );
 
     expect(await screen.findByText("Sushi tacos")).toBeTruthy();
@@ -184,8 +202,9 @@ describe("SessionGraph selection", () => {
     renderGraph();
 
     clickIdea("Tacos");
+    selectBrainstormMode();
     fireEvent.click(
-      screen.getByRole("button", { name: "Expand" })
+      screen.getByRole("button", { name: "Send" })
     );
 
     expect((await screen.findByRole("alert")).textContent).toBe(
@@ -193,8 +212,36 @@ describe("SessionGraph selection", () => {
     );
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "Expand" }).disabled
+        screen.getByRole("button", { name: "Send" }).disabled
       ).toBe(false)
     );
+  });
+
+  test("a chat turn sends the selected node and leaves the canvas unchanged", async () => {
+    renderGraph();
+    clickIdea("Tacos");
+    const nodeCount = document.querySelectorAll(
+      ".react-flow__node"
+    ).length;
+
+    fireEvent.change(screen.getByLabelText("Chat message"), {
+      target: { value: "How does this fit?" }
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Send" })
+    );
+
+    expect(
+      await screen.findByText("They are both dinners.")
+    ).toBeTruthy();
+    expect(fake.requestChat).toHaveBeenCalledWith(
+      "session-1",
+      ["left"],
+      [],
+      "How does this fit?"
+    );
+    expect(
+      document.querySelectorAll(".react-flow__node").length
+    ).toBe(nodeCount);
   });
 });
