@@ -87,8 +87,10 @@ export function SessionGraph({ graph, sessionId }) {
   const [nodeText, setNodeText] = useState("");
   const [childText, setChildText] = useState("");
   const [error, setError] = useState(null);
-  const { selectedIds, clickNode, clear } =
-    useNodeSelection(resetForms);
+  const { selectedIds, clickNode, clear } = useNodeSelection(
+    resetForms,
+    confirmSelectionChange
+  );
   const selectedNodes = selectedIds
     .map((id) => nodes.find((node) => node.id === id))
     .filter(Boolean);
@@ -147,6 +149,20 @@ export function SessionGraph({ graph, sessionId }) {
     setNodeText(single?.data.content ?? "");
     setChildText("");
     setError(null);
+  }
+
+  function confirmSelectionChange() {
+    if (chatTurns.length === 0) return true;
+    if (
+      !window.confirm(
+        "Changing the selected ideas will end this chat. Continue?"
+      )
+    ) {
+      return false;
+    }
+    setChatTurns([]);
+    setChatError(null);
+    return true;
   }
 
   function selectNode(event, node) {

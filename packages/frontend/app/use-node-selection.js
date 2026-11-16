@@ -13,13 +13,15 @@ import {
 // (#94). The composer (#72) reads the same selection. onChange
 // receives the new ids after each change, so a chat can end when
 // the selection changes.
-export function useNodeSelection(onChange) {
+export function useNodeSelection(onChange, beforeChange) {
   const [selectedIds, setSelectedIds] = useState([]);
   const onChangeRef = useRef(onChange);
+  const beforeChangeRef = useRef(beforeChange);
   const reportedIds = useRef(selectedIds);
 
   useEffect(() => {
     onChangeRef.current = onChange;
+    beforeChangeRef.current = beforeChange;
   });
 
   useEffect(() => {
@@ -33,7 +35,10 @@ export function useNodeSelection(onChange) {
   const update = useCallback((next) => {
     setSelectedIds((current) => {
       const ids = next(current);
-      return sameSelection(current, ids) ? current : ids;
+      if (sameSelection(current, ids)) return current;
+      return beforeChangeRef.current?.(ids, current) === false
+        ? current
+        : ids;
     });
   }, []);
 
