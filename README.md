@@ -357,6 +357,17 @@ Playwright starts the dev server on port 3100 by itself. Setup
 creates a throwaway email account with one session, and teardown
 deletes it along with every guest user the tests made.
 
+### Test-driven development: tracking test guests
+
+Guest users made by browser tests must be recorded for teardown.
+We first added a test for a guest notice without a user ID: it
+expected `recordGuest` to report an error, but failed because
+the function returned successfully. We then changed
+`recordGuest` to throw when it cannot find the ID, and the test
+passed. The change also removed the conditional around the file
+write; no further refactoring was needed. The error alerts us
+that the guest may need manual cleanup.
+
 ## Continuous Integration
 
 GitHub Actions will run automated checks on every pull request.

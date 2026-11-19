@@ -36,7 +36,6 @@ const UUID =
 export async function recordGuest(guestNotice) {
   const text = await guestNotice.textContent();
   const [id] = text.match(UUID) ?? [];
-  if (id) {
-    await appendFile(process.env.UI_TEST_GUEST_FILE, `${id}\n`);
-  }
+  if (!id) throw new Error("Could not find the guest user ID");
+  await appendFile(process.env.UI_TEST_GUEST_FILE, `${id}\n`);
 }
