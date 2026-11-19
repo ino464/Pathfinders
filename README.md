@@ -322,6 +322,7 @@ client component or sent to the browser.
 | Command                       | Description                     |
 | ----------------------------- | ------------------------------- |
 | `npm run dev -w frontend`     | Starts the development server   |
+| `npm test`                    | Runs the Vitest suite           |
 | `npm run test:ui -w frontend` | Runs the Playwright UI tests    |
 | `npm run build -w frontend`   | Creates a production build      |
 | `npm run lint`                | Checks the project with ESLint  |
@@ -332,21 +333,38 @@ client component or sent to the browser.
 | `npx supabase stop`           | Stops the optional local stack  |
 | `npx supabase db reset`       | Rebuilds the local database     |
 
-### UI tests
+## Testing
 
-The UI tests use Playwright to drive the real app in a browser
-against hosted Supabase. They cover email sign-in, a wrong
-password, continuing as a guest, starting a session and coming
-back to it. `npm test` and CI do not run them.
+Run `npm install` at the repository root to install
+dependencies. The test levels are:
 
-They read these keys from `packages/frontend/.env.local`:
+- **Unit:** Vitest tests individual functions and routes, using
+  fakes to isolate dependencies. Tests are in
+  `packages/frontend/test/`.
+- **Component:** Vitest, React Testing Library and jsdom test
+  React components and hooks in `packages/frontend/test/`.
+- **System:** Playwright exercises the app across the browser,
+  server and hosted Supabase in `packages/frontend/ui-test/`.
+  The guest flow creates and reopens a session; the signed-in
+  flow creates, renames and deletes one.
+- **UI:** Playwright tests browser interactions such as email
+  sign-in and error messages in `packages/frontend/ui-test/`.
+
+Run unit and component tests from the repository root:
+
+```bash
+npm test
+```
+
+The browser tests read these hosted Supabase values from
+`packages/frontend/.env.local`:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SECRET_KEY`
 
-They need Node 22 or newer. Install the browser once, then run
-the tests:
+They need Node 22 or newer. Install Chromium once, then run the
+UI and system tests:
 
 ```bash
 npx -w frontend playwright install chromium
@@ -355,7 +373,14 @@ npm run test:ui -w frontend
 
 Playwright starts the dev server on port 3100 by itself. Setup
 creates a throwaway email account with one session, and teardown
-deletes it along with every guest user the tests made.
+deletes it and the guest users recorded by the tests, along with
+their sessions. The guest system test also expands an idea when
+`GROQ_API_KEY` is set; without it, that step is skipped. Vitest
+uses test data and fakes for external services.
+
+Playwright does not run in CI, and Google sign-in is not tested.
+Future work includes covering Google sign-in and running the
+browser suite in CI against an isolated test project.
 
 ### Test-driven development: tracking test guests
 
@@ -370,16 +395,13 @@ that the guest may need manual cleanup.
 
 ## Continuous Integration
 
-GitHub Actions will run automated checks on every pull request.
-
-The initial CI workflow will verify:
+GitHub Actions runs automated checks on every pull request and
+push to `main`. The CI workflow verifies:
 
 - ESLint passes
 - Prettier formatting is correct
+- The Vitest suite passes
 - The application builds successfully
-
-Once the workflow is added, its status badge can be placed at
-the top of this README.
 
 ## Project Status
 
