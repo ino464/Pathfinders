@@ -47,9 +47,21 @@ test("a signed-in user creates, renames and deletes a session", async ({
   const renamedRow = page.getByRole("listitem").filter({
     has: renamedLink
   });
-  await renamedRow
-    .getByRole("button", { name: "Delete" })
-    .click();
+  const deleteButton = renamedRow.getByRole("button", {
+    name: "Delete"
+  });
+
+  // the delete asks first (#123): Cancel keeps the session
+  page.once("dialog", (dialog) => dialog.dismiss());
+  await deleteButton.click();
+  await page.reload();
+  await expect(renamedLink).toBeVisible();
+
+  page.once("dialog", (dialog) => {
+    expect(dialog.message()).toContain(`"${renamed}"`);
+    return dialog.accept();
+  });
+  await deleteButton.click();
   await expect(renamedLink).toHaveCount(0);
   await page.reload();
   await expect(renamedLink).toHaveCount(0);

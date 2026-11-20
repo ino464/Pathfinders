@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CurrentUser } from "./current-user";
+import { DeleteSessionForm } from "./delete-session-form";
 import { listSessions } from "../lib/graph-data";
 import {
   createSessionAction,
@@ -46,14 +47,11 @@ export default async function Home() {
                 />
                 <button type="submit">Rename</button>
               </form>
-              <form action={deleteSessionAction}>
-                <input
-                  type="hidden"
-                  name="id"
-                  value={session.id}
-                />
-                <button type="submit">Delete</button>
-              </form>
+              <DeleteSessionForm
+                id={session.id}
+                title={session.title ?? "Untitled session"}
+                action={deleteSessionAction}
+              />
             </li>
           ))}
         </ul>
