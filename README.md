@@ -382,6 +382,43 @@ Playwright does not run in CI, and Google sign-in is not tested.
 Future work includes covering Google sign-in and running the
 browser suite in CI against an isolated test project.
 
+### Test-driven development: confirming a session delete
+
+**Requirement (#123).** On the home page, one click on
+**Delete** removed a session and all its ideas, with no question
+and no undo. The delete must ask first and name the session.
+**Cancel** keeps the session, and **OK** deletes it.
+
+The commits on the branch show each step of the cycle:
+
+| Step     | Commit    | What happened                                                                     |
+| -------- | --------- | --------------------------------------------------------------------------------- |
+| Prepare  | `4df6552` | Move the Delete form into `app/delete-session-form.jsx`. No change in behavior.   |
+| Red      | `65232e1` | Add `test/delete-session-form.test.jsx`. Two of its three tests fail.             |
+| Green    | `4325d2c` | Add the confirmation. All three tests pass.                                       |
+| Refactor | —         | None needed after green. The preparatory move came before the test.               |
+| System   | `9b12387` | The session lifecycle test now checks that Cancel keeps and OK deletes a session. |
+
+**Initial failing test.** Against the form without a
+confirmation, Vitest reported:
+
+```text
+× asks before deleting and names the session
+  AssertionError: expected "bound " to be called 1 times, but got 0 times
+× Cancel keeps the session
+  AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+✓ OK deletes the session
+```
+
+The third test passed from the start. It shows that the test
+submits the form the same way the page does.
+
+**Production change.** `DeleteSessionForm` handles the form's
+submit event. It calls `window.confirm` with the session title,
+and calls `event.preventDefault()` when the answer is Cancel, so
+the server action does not run. The home page passes the title
+to the form.
+
 ### Test-driven development: tracking test guests
 
 Guest users made by browser tests must be recorded for teardown.
