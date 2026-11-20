@@ -49,6 +49,7 @@ export default async function Home() {
               </form>
               <DeleteSessionForm
                 id={session.id}
+                title={session.title ?? "Untitled session"}
                 action={deleteSessionAction}
               />
             </li>
